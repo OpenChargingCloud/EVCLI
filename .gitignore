@@ -260,9 +260,10 @@ paket-files/
 __pycache__/
 *.pyc
 
-# The web login of a running charging station: a password hash, and nobody
-# else's business. Written at the first start beside the solution.
-web-login.json
+# The accounts of a running vehicle: password hashes and the cookies of
+# whoever is signed in, and nobody else's business. Written at the first
+# start beside the solution.
+EV-accounts/
 
 # What a running charging station is configured as: its name servers, its time
 # server and its EVSEs. A property of this particular installation, not of the
