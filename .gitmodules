@@ -7,15 +7,6 @@
 [submodule "libs/Norn"]
 	path = libs/Norn
 	url = https://github.com/Vanaheimr/Norn.git
-[submodule "libs/MCP"]
-	path = libs/MCP
-	url = https://github.com/Vanaheimr/MCP.git
-[submodule "libs/WWCP_OCPP"]
-	path = libs/WWCP_OCPP
-	url = https://github.com/OpenChargingCloud/WWCP_OCPP.git
-[submodule "libs/WWCP_Core"]
-	path = libs/WWCP_Core
-	url = https://github.com/OpenChargingCloud/WWCP_Core.git
 [submodule "libs/WWCP_ISO15118"]
 	path = libs/WWCP_ISO15118
 	url = https://github.com/OpenChargingCloud/WWCP_ISO15118.git
