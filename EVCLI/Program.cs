@@ -218,7 +218,7 @@ namespace cloud.charging.open.EV
         private static void PrintUsage()
         {
             Console.WriteLine("Usage: EVCLI [--port <number>] [--any] [--frontend <dist directory>]");
-            Console.WriteLine("             [--web-login <file>] [--config <file>] [--verbose | --quiet] [--no-trace]");
+            Console.WriteLine("             [--accounts <dir>] [--config <file>] [--verbose | --quiet] [--no-trace]");
             Console.WriteLine("             [--name <name>] [--vin <vin>]");
             Console.WriteLine("             [--battery <kWh>] [--soc <percent>] [--target-soc <percent>]");
             Console.WriteLine("             [--power <kW>] [--taper-from <percent>]");
@@ -239,10 +239,10 @@ namespace cloud.charging.open.EV
             Console.WriteLine("                    bundle embedded in the assembly - use it together with");
             Console.WriteLine("                    'npm run watch' in EV/Frontend");
             Console.WriteLine();
-            Console.WriteLine("Web login:");
-            Console.WriteLine($"  --web-login <file>  where the web login lives (default: {WebLoginFile.DefaultFileName} below the");
+            Console.WriteLine("Accounts:");
+            Console.WriteLine($"  --accounts <dir>    where the accounts live (default: {EV.DefaultAccountsPath}/ below the");
             Console.WriteLine("                      repository root). Without it a password is made up at the");
-            Console.WriteLine($"                      first start for the user '{WebLoginSettings.DefaultUsername}' and shown once.");
+            Console.WriteLine($"                      first start for the user '{EV.DefaultAdminUser}' and shown once.");
             Console.WriteLine();
             Console.WriteLine("Configuration:");
             Console.WriteLine($"  --config <file>   where everything this vehicle is told in writing lives");
@@ -358,7 +358,7 @@ namespace cloud.charging.open.EV
             IPPort?  port           = null;
             var      anyAddress     = false;
             String?  frontendDir    = null;
-            String?  loginFilePath  = null;
+            String?  accountsPath   = null;
             String?  configFilePath = null;
             var      verbose        = false;
             var      quiet          = false;
@@ -437,10 +437,10 @@ namespace cloud.charging.open.EV
                         }
                         break;
 
-                    case "--web-login":
-                        if (!TryTakeValue(Arguments, ref i, out loginFilePath))
+                    case "--accounts":
+                        if (!TryTakeValue(Arguments, ref i, out accountsPath))
                         {
-                            Console.Error.WriteLine("Missing file after --web-login!");
+                            Console.Error.WriteLine("Missing directory after --accounts!");
                             return 2;
                         }
                         break;
@@ -798,9 +798,7 @@ namespace cloud.charging.open.EV
 
                               HTTPPort:         port,
 
-                              LoginFile:        new WebLoginFile(
-                                                    loginFilePath ?? Path.Combine(RepositoryRoot(), WebLoginFile.DefaultFileName)
-                                                ),
+                              AccountsPath:     accountsPath ?? Path.Combine(RepositoryRoot(), EV.DefaultAccountsPath),
 
                               ConfigFile:       new EVConfigFile(
                                                     configFilePath ?? Path.Combine(RepositoryRoot(), EVConfigFile.DefaultFileName)
@@ -973,7 +971,8 @@ namespace cloud.charging.open.EV
                 Console.WriteLine($"  JSON API       {vehicle.WebInterfaceURL}api/v1/status");
                 Console.WriteLine($"  event stream   {vehicle.WebInterfaceURL}api/v1/events");
                 Console.WriteLine($"  frontend from  {vehicle.Frontend.Description}");
-                Console.WriteLine($"  web login      user '{vehicle.Sessions.Username}', {vehicle.LoginFile.Path}");
+                Console.WriteLine($"  accounts       {vehicle.ExtAPI.Users.Count()} user(s) in {vehicle.AccountsPath}");
+                Console.WriteLine($"  sign in at     {vehicle.WebInterfaceURL}{EV.ExtAPIPath.ToString().Trim('/')}/login");
                 Console.WriteLine($"  configuration  {vehicle.ConfigFile.Path}");
                 Console.WriteLine($"  vehicle        {vehicle.VehicleName}{(vehicle.VIN is not null ? $" ({vehicle.VIN})" : "")}");
                 Console.WriteLine($"  battery        {vehicle.StateOfCharge_percent:F0} % of {vehicle.BatteryCapacity_kWh:F0} kWh, " +
@@ -993,8 +992,8 @@ namespace cloud.charging.open.EV
                 if (vehicle.GeneratedPassword is not null)
                 {
                     Console.WriteLine();
-                    Console.WriteLine("  ┌─ First start: there was no web login, so one was made up for you ─────────");
-                    Console.WriteLine($"  │  user      {vehicle.Sessions.Username}");
+                    Console.WriteLine("  ┌─ First start: there were no accounts, so one was made up for you ─────────");
+                    Console.WriteLine($"  │  user      {EV.DefaultAdminUser}");
                     Console.WriteLine($"  │  password  {vehicle.GeneratedPassword}");
                     Console.WriteLine("  │  It is shown here once and kept only as a hash. Write it down.");
                     Console.WriteLine("  └───────────────────────────────────────────────────────────────────────────");
