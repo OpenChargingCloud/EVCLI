@@ -183,9 +183,9 @@ namespace cloud.charging.open.EV
         /// leads to it.
         /// </summary>
         /// <remarks>
-        /// The web login file defaults to a place below it, so that it does not
-        /// end up in bin/ - where the next "dotnet clean" would take the
-        /// vehicle's password with it.
+        /// The accounts default to a place below it, so that they do not end
+        /// up in bin/ - where the next "dotnet clean" would take the vehicle's
+        /// one password with them.
         /// </remarks>
         private static String RepositoryRoot()
         {
