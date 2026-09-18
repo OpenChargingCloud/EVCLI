@@ -83,7 +83,7 @@ The build needs the .NET 10 SDK and Node.js. `dotnet build
 -p:SkipFrontendBuild=true` leaves the npm step out and reuses whatever is in
 `libs/EV/EV/Frontend/dist`.
 
-The first start makes up one account, `root`, keeps it under `EV-accounts/`
+The first start makes up one account, `root`, keeps it under `accounts/`
 beside the solution and prints its password once. Signing in happens at
 Hermod's HTTPExt API, mounted under `/ext`. The web interface is
 on <http://127.0.0.1:2347/>; `--any` binds every address instead of the
