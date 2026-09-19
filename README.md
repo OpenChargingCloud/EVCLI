@@ -17,8 +17,8 @@ TLS, EIM or Plug & Charge.
 
 Every request that goes out and every answer that comes in appears in the log
 while it happens, so the **Logs** page shows the exchange itself rather than
-only its outcome. `--sdp`, `--slac` and `--charge` do the same things once at a
-start, from the console.
+only its outcome. `--sdp`, `--slac`, `--t1s` and `--charge` do the same things
+once at a start, from the console.
 
 A vehicle is not a station turned around. A station runs a loop: it listens,
 and answers whoever plugs in. A vehicle's flow has a beginning and an end —
@@ -106,11 +106,46 @@ time. IPv6 literals must be bracketed: `[fe80::1%eth0]:15118`. An unbracketed
 `::1:15118` is a valid address in its own right, so splitting it at the last
 colon would connect somewhere else entirely.
 
-The four certificate passwords are read from `EV_VEHICLE_CERT_PASSWORD`,
-`EV_CONTRACT_CERT_PASSWORD`, `EV_OEM_CERT_PASSWORD` and
-`EV_TARIFF_CERT_PASSWORD`. They are never written to the configuration file. A
-password given as a switch instead stands in the process list for every other
-user of the machine.
+### Certificates
+
+Everything this vehicle believes and everything it presents lives in one store,
+`certificates/` beside the solution, and is managed on the **Certificates**
+page or from the command line. A certificate is put there once and then chosen
+by a short handle, so the same contract can be kept beside three others and
+switched between runs.
+
+There are three kinds of root, kept apart rather than pooled, because they
+answer three different questions: a **v2gRoot** says which station may be at
+the other end of the cable, an **moRoot** says which contract certificate is
+worth paying with, and an **oemRoot** says which vehicle a station should issue
+a contract to. One bag of roots would let an OEM root vouch for a contract.
+Every switched-on root of a kind is believed at once; none of them is chosen
+per session.
+
+The four credentials — `vehicle`, `contract`, `oemProvisioning` and
+`tariffVerification` — are chosen one per session, on the Charging page or with
+the switches below.
+
+```
+dotnet run --project EVCLI --     --import-certificate v2gRoot=v2g-root.pem     --import-certificate contract=contract.p12 --certificate-password secret     --list-certificates
+```
+
+Importing a credential also chooses it; importing a root simply makes it
+believed. `--list-certificates` prints every handle. Certificates that are
+already in the store directory — copied in by hand, restored from a backup — are
+read again at every start and adopted, so putting a file there is a way to
+install it.
+
+**The private keys in the store are not encrypted.** A PKCS#12 is opened with
+its password once, at import, and written back without one, so that any number
+of certificates per role work without any number of passwords to carry. What
+guards them is the file system. Anybody who can read `certificates/` can take
+this vehicle's identity and its contract, so it belongs on a machine whose users
+are all trusted with exactly that. The vehicle says so at every start.
+
+A password for an import is read from `EV_CERT_PASSWORD` where
+`--certificate-password` is not given. A password given as a switch stands in
+the process list for every other user of the machine.
 
 While working on the web interface, run `npm run watch` in
 `libs/EV/EV/Frontend` and start the vehicle with `--frontend
@@ -125,6 +160,7 @@ without rebuilding the C# side.
 | `EVCLI/` | the command line: switches, and what the console says at a start |
 | `libs/EV/EV/` | the vehicle itself - its configuration, its log, its JSON API, its web interface |
 | `libs/EV/EV/Frontend/` | the web interface: TypeScript and SCSS, bundled by webpack |
+| `libs/EV/EV/Certificates/` | the certificate store: what is in it, and what may go in |
 | `libs/EV/EVTests/` | what the configuration may say, and what it may not |
 | `libs/WWCP_ISO15118/` | the protocol: SDP, SLAC, V2GTP, the EXI codec, the session state machines |
 
