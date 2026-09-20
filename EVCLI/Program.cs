@@ -28,6 +28,7 @@ using cloud.charging.open.protocols.ISO15118.SDP.Messages;
 using cloud.charging.open.protocols.ISO15118.SharedCC;
 using cloud.charging.open.protocols.ISO15118.StateMachines;
 
+using cloud.charging.open.EV.Certificates;
 using cloud.charging.open.EV.Configuration;
 using cloud.charging.open.EV.ISO15118;
 using cloud.charging.open.EV.Logging;
@@ -51,8 +52,9 @@ namespace cloud.charging.open.EV
     /// Almost every switch below is a setting that is written to the
     /// configuration file, so it is said once rather than at every start - and
     /// so that the web interface and the command line never disagree about what
-    /// this vehicle is. The exceptions are the four passwords, which are never
-    /// written down, and the three switches that make something happen.
+    /// this vehicle is. The exceptions are the password an import is opened
+    /// with, which is never written down, and the switches that make something
+    /// happen.
     /// </remarks>
     public class Program
     {
@@ -213,6 +215,67 @@ namespace cloud.charging.open.EV
 
         #endregion
 
+        #region (private static) ListCertificates(Vehicle)
+
+        /// <summary>
+        /// What is in this vehicle's certificate store, as a table.
+        /// </summary>
+        /// <remarks>
+        /// Printed and not returned: this is what <c>--list-certificates</c>
+        /// exists for, and its whole job is to put the handles in front of
+        /// somebody who has to type one into another switch.
+        /// </remarks>
+        private static void ListCertificates(EV vehicle)
+        {
+
+            Console.WriteLine();
+            Console.WriteLine($"  Certificates in {vehicle.Certificates.Directory}");
+            Console.WriteLine();
+
+            var entries = vehicle.Certificates.Entries;
+
+            if (entries.Count == 0)
+            {
+                Console.WriteLine("  (empty - put one there with --import-certificate <kind>=<file>)");
+                Console.WriteLine();
+                return;
+            }
+
+            foreach (var kind in CertificateKindExtensions.All)
+            {
+
+                var ofKind = entries.Where(entry => entry.Kind == kind).ToArray();
+
+                if (ofKind.Length == 0)
+                    continue;
+
+                Console.WriteLine($"  {kind.Describe()}");
+
+                foreach (var entry in ofKind)
+                {
+
+                    var state = !entry.IsActive   ? "off"
+                                : entry.IsExpired ? "EXPIRED"
+                                : entry.IsNotYetValid ? "not yet valid"
+                                : "on";
+
+                    var chosen = vehicle.UsedBySession(entry.Id) is not null
+                                     ? "  <- chosen"
+                                     : "";
+
+                    Console.WriteLine($"    {entry.Id}  {state,-13}  until {entry.NotAfter.UtcDateTime:yyyy-MM-dd}  " +
+                                      $"{entry.Label}{chosen}");
+
+                }
+
+                Console.WriteLine();
+
+            }
+
+        }
+
+        #endregion
+
         #region (private static) PrintUsage()
 
         private static void PrintUsage()
@@ -224,12 +287,16 @@ namespace cloud.charging.open.EV
             Console.WriteLine("             [--power <kW>] [--taper-from <percent>]");
             Console.WriteLine("             [--interface <name>] [--no-tls] [--sdp]");
             Console.WriteLine("             [--connect <host:port>] [--protocol 2|20|both] [--mode ac|dc|mcs]");
-            Console.WriteLine("             [--tls | --tls-backend dotnet|bc] [--trust-roots <file|dir>]");
-            Console.WriteLine("             [--pki-dir <dir>] [--vehicle-cert <pfx>] [--contract-cert <pfx>]");
-            Console.WriteLine("             [--oem-cert <pfx>] [--tariff-cert <pfx>]");
+            Console.WriteLine("             [--tls | --tls-backend dotnet|bc] [--pki-dir <dir>]");
+            Console.WriteLine("             [--certificates <dir>] [--import-certificate <kind>=<file>]");
+            Console.WriteLine("             [--certificate-password <pw>] [--list-certificates]");
+            Console.WriteLine("             [--vehicle-cert <handle>] [--contract-cert <handle>]");
+            Console.WriteLine("             [--oem-cert <handle>] [--tariff-cert <handle>]");
             Console.WriteLine("             [--target-energy <kWh>] [--max-charging-time <dur>]");
             Console.WriteLine("             [--departure-time <dur>] [--min-soc <percent>] [--renegotiate]");
-            Console.WriteLine("             [--slac-peer <host:port>] [--slac] [--charge]");
+            Console.WriteLine("             [--slac-peer <host:port>] [--slac]");
+            Console.WriteLine("             [--t1s-transport none|auto|afpacket|udp] [--t1s-bus <group:port>]");
+            Console.WriteLine("             [--t1s-interface <name>] [--t1s-weight <1..8>] [--t1s] [--charge]");
             Console.WriteLine("             [--pause | --pause-resume | --resume <hex>]");
             Console.WriteLine();
             Console.WriteLine("Web interface:");
@@ -297,37 +364,66 @@ namespace cloud.charging.open.EV
             Console.WriteLine("                    bc = BouncyCastle, the -20-faithful profile (TLS 1.3,");
             Console.WriteLine("                    secp521r1, mutual). Required on Windows and macOS for a real");
             Console.WriteLine("                    -20 session. Wins over --tls when both are given");
-            Console.WriteLine("  --trust-roots <file|dir>");
-            Console.WriteLine("                    validate the station's chain against these V2G root(s).");
-            Console.WriteLine("                    Without it no station certificate is checked at all, and a");
-            Console.WriteLine("                    handshake that succeeds says this vehicle was authenticated");
-            Console.WriteLine("                    rather than the station");
             Console.WriteLine("  --pki-dir <dir>   the development hierarchy a station minted: this vehicle reads");
             Console.WriteLine("                    its own chain out of it and pins the station's leaf");
             Console.WriteLine();
-            Console.WriteLine("This vehicle's three certificates. They are not interchangeable:");
-            Console.WriteLine("  --vehicle-cert <pfx>      the Vehicle certificate - who this vehicle is. Presented");
+            Console.WriteLine("The certificate store. Everything this vehicle believes and presents is kept");
+            Console.WriteLine("here, one file per certificate, and switched on and off one at a time:");
+            Console.WriteLine($"  --certificates <dir>      where the store is (default: {CertificatesConfiguration.DefaultDirectory}/ below");
+            Console.WriteLine("                    the repository root). Certificates already in that directory are");
+            Console.WriteLine("                    read again at every start, so copying one in is a way to install");
+            Console.WriteLine("                    it. The Certificates page manages the same store");
+            Console.WriteLine("  --import-certificate <kind>=<file>");
+            Console.WriteLine("                    copy a certificate into the store, as PEM, DER or PKCS#12. May be");
+            Console.WriteLine("                    given several times. <kind> is one of:");
+            Console.WriteLine("                      v2gRoot   what a station's certificate must chain to");
+            Console.WriteLine("                      moRoot    what a contract certificate must chain to");
+            Console.WriteLine("                      oemRoot   what an OEM provisioning certificate must chain to");
+            Console.WriteLine("                      vehicle   who this vehicle is (needs the private key)");
+            Console.WriteLine("                      contract  who pays (needs the private key)");
+            Console.WriteLine("                      oemProvisioning   what it was born with; the key must be P-521");
+            Console.WriteLine("                      tariffVerification  what a station's signed tariff is checked with");
+            Console.WriteLine("                    A root is believed as soon as it is in; every usable one of its");
+            Console.WriteLine("                    kind is. A credential has one slot, so importing one also chooses");
+            Console.WriteLine("                    it - name a handle below to choose a different one");
+            Console.WriteLine("  --certificate-password <pw>");
+            Console.WriteLine("                    what opens a protected PKCS#12 being imported. Used once and not");
+            Console.WriteLine("                    kept: the store holds what it has without a password. A password");
+            Console.WriteLine("                    given here stands in the process list for every other user of the");
+            Console.WriteLine("                    machine, so prefer the environment: EV_CERT_PASSWORD");
+            Console.WriteLine("  --list-certificates       print the store, with the handle of each certificate");
+            Console.WriteLine();
+            Console.WriteLine("Which of them one session uses. Each names a handle --list-certificates prints,");
+            Console.WriteLine("and they are not interchangeable:");
+            Console.WriteLine("  --vehicle-cert <handle>   the Vehicle certificate - who this vehicle is. Presented");
             Console.WriteLine("                    in the TLS handshake; for -20 the station's resume binding is");
             Console.WriteLine("                    computed over it");
-            Console.WriteLine("  --contract-cert <pfx>     the contract certificate - who pays. Plug & Charge");
-            Console.WriteLine("  --oem-cert <pfx>  the OEM provisioning certificate - what the vehicle was born");
-            Console.WriteLine("                    with. -20 asks the station to issue a contract with it and");
-            Console.WriteLine("                    unwraps the key it sends back; the key must be P-521");
-            Console.WriteLine("  --tariff-cert <pfx>       the public key a station's signed tariff is checked with");
-            Console.WriteLine("  --vehicle-cert-pass, --contract-cert-pass, --oem-cert-pass, --tariff-cert-pass");
-            Console.WriteLine("                    what opens them. Never written to the configuration file. A");
-            Console.WriteLine("                    password given here stands in the process list for every other");
-            Console.WriteLine("                    user of the machine, so prefer the environment:");
-            Console.WriteLine($"                    {CertificatePasswords.VehicleVariable}, {CertificatePasswords.ContractVariable},");
-            Console.WriteLine($"                    {CertificatePasswords.OEMVariable}, {CertificatePasswords.TariffVariable}");
+            Console.WriteLine("  --contract-cert <handle>  the contract certificate - who pays. Plug & Charge");
+            Console.WriteLine("  --oem-cert <handle>       the OEM provisioning certificate - what the vehicle was");
+            Console.WriteLine("                    born with. -20 asks the station to issue a contract with it and");
+            Console.WriteLine("                    unwraps the key it sends back");
+            Console.WriteLine("  --tariff-cert <handle>    the public key a station's signed tariff is checked with");
             Console.WriteLine();
             Console.WriteLine("SLAC, the pairing stage before SDP:");
             Console.WriteLine("  --slac-peer <host:port>   the station's SLAC endpoint on a simulated medium. Real");
             Console.WriteLine("                    SLAC is EtherType 0x88E1 over AF_PACKET and needs Linux and");
             Console.WriteLine("                    CAP_NET_RAW; this runs the same state machine over UDP");
             Console.WriteLine();
+            Console.WriteLine("MCS: the 10BASE-T1S bus below a megawatt coupler, joined before SDP:");
+            Console.WriteLine("  --t1s-transport <kind>    none, auto, afpacket or udp. auto takes a real adapter");
+            Console.WriteLine("                    (AF_PACKET; Linux and CAP_NET_RAW) where there is one and nothing");
+            Console.WriteLine("                    anywhere else; udp is the emulated medium and has to be asked for");
+            Console.WriteLine("  --t1s-bus <group:port>    the multicast group that is the emulated bus, default");
+            Console.WriteLine("                    239.151.18.1:16118. Naming one implies --t1s-transport udp");
+            Console.WriteLine("  --t1s-interface <name>    the adapter, for afpacket (default: the V2G interface); the");
+            Console.WriteLine("                    interface to join the group on, for udp (default: the OS picks)");
+            Console.WriteLine("  --t1s-weight <1..8>       transmit opportunities per cycle to ask the station for,");
+            Console.WriteLine("                    default 3 - more than any sensor in the coupler gets");
+            Console.WriteLine();
             Console.WriteLine("Doing something at a start. Everything else above only configures:");
             Console.WriteLine("  --slac            pair once, and print what came of it");
+            Console.WriteLine("  --t1s             join the coupler's bus once, stay on it two seconds, and print");
+            Console.WriteLine("                    what came of it");
             Console.WriteLine("  --sdp             look for a station once, and print what answered");
             Console.WriteLine("  --charge          run one session once the vehicle is up, and print the result.");
             Console.WriteLine("                    The whole exchange is in the log and on the event stream while");
@@ -380,25 +476,33 @@ namespace cloud.charging.open.EV
             String?    modeText      = null;
             var        tls           = false;
             String?    tlsBackend    = null;
-            String?    trustRoots    = null;
             String?    pkiDir        = null;
             String?    vehicleCert   = null;
             String?    contractCert  = null;
             String?    oemCert       = null;
             String?    tariffCert    = null;
             String?    slacPeer      = null;
+            String?    t1sTransport  = null;
+            String?    t1sBus        = null;
+            String?    t1sInterface  = null;
+            Byte?      t1sWeight     = null;
             Boolean?   renegotiate   = null;
             Double?    targetEnergy  = null;
             Double?    minimumSoC    = null;
             TimeSpan?  maxTime       = null;
             TimeSpan?  departure     = null;
 
-            String?  vehicleCertPass   = null;
-            String?  contractCertPass  = null;
-            String?  oemCertPass       = null;
-            String?  tariffCertPass    = null;
+            String?  certificatesDir   = null;
+            String?  certPassword      = null;
+            var      listCertificates  = false;
+
+            // Repeatable, and in the order they were typed: importing a root
+            // before the credential it vouches for means the credential's chain
+            // is checked at the first session rather than at the second.
+            var      imports           = new List<(CertificateKind Kind, String File)>();
 
             var      pairAtStart     = false;
+            var      attachAtStart   = false;
             var      discoverAtStart = false;
             var      chargeAtStart   = false;
             var      pause           = false;
@@ -605,14 +709,6 @@ namespace cloud.charging.open.EV
                         }
                         break;
 
-                    case "--trust-roots":
-                        if (!TryTakeValue(Arguments, ref i, out trustRoots))
-                        {
-                            Console.Error.WriteLine("Missing file or directory after --trust-roots!");
-                            return 2;
-                        }
-                        break;
-
                     case "--pki-dir":
                         if (!TryTakeValue(Arguments, ref i, out pkiDir))
                         {
@@ -653,37 +749,58 @@ namespace cloud.charging.open.EV
                         }
                         break;
 
-                    case "--vehicle-cert-pass":
-                        if (!TryTakeValue(Arguments, ref i, out vehicleCertPass))
+                    case "--certificates":
+                        if (!TryTakeValue(Arguments, ref i, out certificatesDir))
                         {
-                            Console.Error.WriteLine("Missing password after --vehicle-cert-pass!");
+                            Console.Error.WriteLine("Missing directory after --certificates!");
                             return 2;
                         }
                         break;
 
-                    case "--contract-cert-pass":
-                        if (!TryTakeValue(Arguments, ref i, out contractCertPass))
+                    case "--certificate-password":
+                        if (!TryTakeValue(Arguments, ref i, out certPassword))
                         {
-                            Console.Error.WriteLine("Missing password after --contract-cert-pass!");
+                            Console.Error.WriteLine("Missing password after --certificate-password!");
                             return 2;
                         }
                         break;
 
-                    case "--oem-cert-pass":
-                        if (!TryTakeValue(Arguments, ref i, out oemCertPass))
-                        {
-                            Console.Error.WriteLine("Missing password after --oem-cert-pass!");
-                            return 2;
-                        }
+                    case "--list-certificates":
+                        listCertificates = true;
                         break;
 
-                    case "--tariff-cert-pass":
-                        if (!TryTakeValue(Arguments, ref i, out tariffCertPass))
+                    case "--import-certificate":
+                    {
+
+                        if (!TryTakeValue(Arguments, ref i, out var import) || import is null)
                         {
-                            Console.Error.WriteLine("Missing password after --tariff-cert-pass!");
+                            Console.Error.WriteLine("Missing <kind>=<file> after --import-certificate!");
                             return 2;
                         }
+
+                        // Split at the FIRST '=' only: everything after it is
+                        // the path, and a Windows path is full of things that
+                        // are not separators.
+                        var split = import.IndexOf('=');
+
+                        if (split < 1 || split == import.Length - 1)
+                        {
+                            Console.Error.WriteLine($"--import-certificate wants <kind>=<file>, and '{import}' is not that.");
+                            return 2;
+                        }
+
+                        if (!CertificateKindExtensions.TryParseKind(import[..split], out var importKind))
+                        {
+                            Console.Error.WriteLine($"'{import[..split]}' is not a kind of certificate. " +
+                                                    $"Use one of {String.Join(", ", CertificateKindExtensions.All.Select(one => one.AsText()))}.");
+                            return 2;
+                        }
+
+                        imports.Add((importKind, import[(split + 1)..]));
+
                         break;
+
+                    }
 
                     #endregion
 
@@ -699,10 +816,53 @@ namespace cloud.charging.open.EV
 
                     #endregion
 
+                    #region T1S
+
+                    case "--t1s-transport":
+                        if (!TryTakeValue(Arguments, ref i, out t1sTransport))
+                        {
+                            Console.Error.WriteLine("Missing kind after --t1s-transport! One of none, auto, afpacket, udp.");
+                            return 2;
+                        }
+                        break;
+
+                    case "--t1s-bus":
+                        if (!TryTakeValue(Arguments, ref i, out t1sBus))
+                        {
+                            Console.Error.WriteLine("Missing group:port after --t1s-bus!");
+                            return 2;
+                        }
+                        break;
+
+                    case "--t1s-interface":
+                        if (!TryTakeValue(Arguments, ref i, out t1sInterface))
+                        {
+                            Console.Error.WriteLine("Missing interface name after --t1s-interface!");
+                            return 2;
+                        }
+                        break;
+
+                    case "--t1s-weight":
+                        if (!TryTakeValue(Arguments, ref i, out var weightText) ||
+                            !Byte.TryParse(weightText, NumberStyles.Integer, CultureInfo.InvariantCulture, out var weight) ||
+                            weight < 1 || weight > 8)
+                        {
+                            Console.Error.WriteLine("Missing or invalid weight after --t1s-weight! Between 1 and 8 transmit opportunities per cycle.");
+                            return 2;
+                        }
+                        t1sWeight = weight;
+                        break;
+
+                    #endregion
+
                     #region What to actually do at a start
 
                     case "--slac":
                         pairAtStart = true;
+                        break;
+
+                    case "--t1s":
+                        attachAtStart = true;
                         break;
 
                     case "--sdp":
@@ -806,15 +966,7 @@ namespace cloud.charging.open.EV
 
                               Frontend:         frontend,
 
-                              // Only what was typed. Everything else the
-                              // environment holds is filled in by the vehicle,
-                              // and neither is ever written down.
-                              Passwords:        new CertificatePasswords(
-                                                    vehicleCertPass,
-                                                    contractCertPass,
-                                                    oemCertPass,
-                                                    tariffCertPass
-                                                ),
+                              CertificatesPath: certificatesDir,
 
                               ConsoleLogLevel:  verbose ? LogLevel.Debug
                                                     : quiet ? LogLevel.Warning
@@ -890,12 +1042,71 @@ namespace cloud.charging.open.EV
 
                 #endregion
 
+                #region What the switches said about certificates
+
+                // Before the session settings below, so that a certificate
+                // imported in this run can be what they name.
+                foreach (var (kind, file) in imports)
+                {
+
+                    if (!File.Exists(file))
+                    {
+                        Console.Error.WriteLine($"--import-certificate: there is no file '{file}'.");
+                        return 2;
+                    }
+
+                    Byte[] content;
+
+                    try
+                    {
+                        content = await File.ReadAllBytesAsync(file);
+                    }
+                    catch (Exception problem)
+                    {
+                        Console.Error.WriteLine($"--import-certificate: '{file}' could not be read: {problem.Message}");
+                        return 2;
+                    }
+
+                    if (!vehicle.Certificates.Import(content,
+                                                     kind,
+                                                     certPassword ?? Environment.GetEnvironmentVariable("EV_CERT_PASSWORD"),
+                                                     Label: null,
+                                                     out var imported,
+                                                     out var problem2))
+                    {
+                        Console.Error.WriteLine($"--import-certificate: {file} could not be imported as " +
+                                                $"{kind.AsText()}: {problem2}");
+                        return 2;
+                    }
+
+                    Console.WriteLine($"  imported       {imported.Label} as {kind.AsText()}, handle {imported.Id}");
+
+                    // A credential has exactly one slot and the kind already
+                    // named it, so importing one is choosing it. A root has no
+                    // slot: every usable one of its kind is believed, and there
+                    // is nothing to choose.
+                    switch (kind)
+                    {
+                        case CertificateKind.Vehicle:             vehicleCert  ??= imported.Id;  break;
+                        case CertificateKind.Contract:            contractCert ??= imported.Id;  break;
+                        case CertificateKind.OEMProvisioning:     oemCert      ??= imported.Id;  break;
+                        case CertificateKind.TariffVerification:  tariffCert   ??= imported.Id;  break;
+                    }
+
+                }
+
+                if (listCertificates)
+                    ListCertificates(vehicle);
+
+                #endregion
+
                 #region What the switches said about a session
 
                 if (connect is not null || protocolText is not null || modeText is not null || tls ||
-                    tlsBackend is not null || trustRoots is not null || pkiDir is not null ||
+                    tlsBackend is not null || pkiDir is not null ||
                     vehicleCert is not null || contractCert is not null || oemCert is not null ||
                     tariffCert is not null || slacPeer is not null || renegotiate.HasValue ||
+                    t1sTransport is not null || t1sBus is not null || t1sInterface is not null || t1sWeight.HasValue ||
                     targetEnergy.HasValue || minimumSoC.HasValue || maxTime.HasValue || departure.HasValue)
                 {
 
@@ -908,13 +1119,16 @@ namespace cloud.charging.open.EV
                     if (connect      is not null)  told["connect"]                      = connect;
                     if (protocolText is not null)  told["protocol"]                     = protocolText;
                     if (modeText     is not null)  told["mode"]                         = modeText;
-                    if (trustRoots   is not null)  told["trustRoots"]                   = trustRoots;
                     if (pkiDir       is not null)  told["pkiDirectory"]                 = pkiDir;
                     if (vehicleCert  is not null)  told["vehicleCertificate"]           = vehicleCert;
                     if (contractCert is not null)  told["contractCertificate"]          = contractCert;
                     if (oemCert      is not null)  told["oemCertificate"]               = oemCert;
                     if (tariffCert   is not null)  told["tariffCertificate"]            = tariffCert;
                     if (slacPeer     is not null)  told["slacPeer"]                     = slacPeer;
+                    if (t1sTransport is not null)  told["t1sTransport"]                 = t1sTransport;
+                    if (t1sBus       is not null)  told["t1sBus"]                       = t1sBus;
+                    if (t1sInterface is not null)  told["t1sInterface"]                 = t1sInterface;
+                    if (t1sWeight.HasValue)        told["t1sWeight"]                    = t1sWeight.Value;
                     if (renegotiate.HasValue)      told["renegotiate"]                  = renegotiate.Value;
                     if (targetEnergy.HasValue)     told["targetEnergyKWh"]              = targetEnergy.Value;
                     if (minimumSoC.HasValue)       told["minimumStateOfChargePercent"]  = minimumSoC.Value;
@@ -1016,6 +1230,13 @@ namespace cloud.charging.open.EV
                     Console.WriteLine();
                 }
 
+                if (attachAtStart)
+                {
+                    var attached = await vehicle.AttachToBusAsync();
+                    Console.WriteLine($"  T1S            {AttachOutcome(attached)}");
+                    Console.WriteLine();
+                }
+
                 if (discoverAtStart)
                 {
                     var found = await vehicle.DiscoverAsync();
@@ -1106,6 +1327,22 @@ namespace cloud.charging.open.EV
                    "notConfigured"   => "no peer configured - give --slac-peer <host:port>",
                    "cancelled"       => "cancelled",
                    _                 => Pairing.Value<String>("error") ?? "the pairing failed - see the log"
+               };
+
+        /// <summary>
+        /// How joining the coupler's bus went, in one line.
+        /// </summary>
+        private static String AttachOutcome(JObject Attachment)
+
+            => Attachment.Value<String>("outcome") switch {
+                   "attached"        => $"on the bus as node {Attachment.Value<Int32>("nodeId")} over {Attachment.Value<String>("medium")} " +
+                                        $"in {Attachment.Value<Double>("elapsed_ms"):F0} ms, " +
+                                        $"{Attachment.Value<Int32>("weight")} opportunit{(Attachment.Value<Int32>("weight") == 1 ? "y" : "ies")} per cycle, " +
+                                        $"coordinator {Attachment.Value<String>("coordinator")}",
+                   "notConfigured"   => "no transport configured - give --t1s-transport <kind> or --t1s-bus <group:port>",
+                   "declined"        => Attachment.Value<String>("reason") ?? "no bus to join here",
+                   "cancelled"       => "cancelled",
+                   _                 => Attachment.Value<String>("error") ?? "joining the bus failed - see the log"
                };
 
         /// <summary>
