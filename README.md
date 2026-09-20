@@ -109,10 +109,17 @@ colon would connect somewhere else entirely.
 ### Certificates
 
 Everything this vehicle believes and everything it presents lives in one store,
-`certificates/` beside the solution, and is managed on the **Certificates**
-page or from the command line. A certificate is put there once and then chosen
-by a short handle, so the same contract can be kept beside three others and
-switched between runs.
+`certificates/` beside the configuration file — so beside the solution unless
+`--config` says otherwise — and is managed on the **Certificates** page or from
+the command line. A certificate is put there once and then chosen by a short
+handle, so the same contract can be kept beside three others and switched
+between runs.
+
+The store is the directory: one file per certificate below it, and an
+`index.json` recording the two things a file cannot say about itself, what
+somebody calls it and whether it is switched on. So a store copied to another
+machine arrives complete, and a lost index costs labels and switches rather
+than certificates.
 
 There are three kinds of root, kept apart rather than pooled, because they
 answer three different questions: a **v2gRoot** says which station may be at
@@ -127,21 +134,34 @@ The four credentials — `vehicle`, `contract`, `oemProvisioning` and
 the switches below.
 
 ```
-dotnet run --project EVCLI --     --import-certificate v2gRoot=v2g-root.pem     --import-certificate contract=contract.p12 --certificate-password secret     --list-certificates
+dotnet run --project EVCLI -- \
+    --import-certificate v2gRoot=v2g-root.pem \
+    --import-certificate contract=contract.p12 --certificate-password secret \
+    --list-certificates
 ```
 
 Importing a credential also chooses it; importing a root simply makes it
-believed. `--list-certificates` prints every handle. Certificates that are
-already in the store directory — copied in by hand, restored from a backup — are
-read again at every start and adopted, so putting a file there is a way to
-install it.
+believed. `--list-certificates` prints every handle, and `--certificates
+<dir>` points the vehicle at another store. Certificates already in the store
+directory — copied in by hand, restored from a backup — are read again at every
+start and adopted, so putting a file there is a way to install it.
+
+Switching a certificate off is not the same as deleting it: the first leaves
+the file where it is, for the afternoon somebody takes a contract out of
+service; the second deletes it, because a store whose "delete" left the private
+key on the disk would be worse than one with no delete at all. Time switches a
+certificate off as well, and separately — an expired certificate stays listed
+and stops being used.
 
 **The private keys in the store are not encrypted.** A PKCS#12 is opened with
 its password once, at import, and written back without one, so that any number
 of certificates per role work without any number of passwords to carry. What
-guards them is the file system. Anybody who can read `certificates/` can take
-this vehicle's identity and its contract, so it belongs on a machine whose users
-are all trusted with exactly that. The vehicle says so at every start.
+guards them is the file system: the store directory is made for its owner alone
+where the platform allows saying so in one call, which on Windows means the ACL
+a new directory inherits and nothing more. Anybody who can read `certificates/`
+can take this vehicle's identity and its contract, so it belongs on a machine
+whose users are all trusted with exactly that. The vehicle says so at every
+start, and at every import of a key.
 
 A password for an import is read from `EV_CERT_PASSWORD` where
 `--certificate-password` is not given. A password given as a switch stands in
