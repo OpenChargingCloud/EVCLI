@@ -182,7 +182,7 @@ without rebuilding the C# side.
 | `libs/EV/EV/Frontend/` | the web interface: TypeScript and SCSS, bundled by webpack |
 | `libs/EV/EV/Certificates/` | the certificate store: what is in it, and what may go in |
 | `libs/EV/EVTests/` | what the configuration may say, and what it may not |
-| `libs/WWCP_ISO15118/` | the protocol: SDP, SLAC, V2GTP, the EXI codec, the session state machines |
+| `libs/WWCP_ISO15118/` | the protocol: SDP, SLAC, the 10BASE-T1S bus, V2GTP, the EXI codec, the session state machines |
 
 The command line is this program's vocabulary and nothing else. What a vehicle
 *is*, and what it does, lives in `libs/EV`.

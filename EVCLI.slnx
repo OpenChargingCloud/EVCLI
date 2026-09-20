@@ -27,6 +27,8 @@
     <Project Path="libs/WWCP_ISO15118/WWCP_ISO15118_SharedCC/WWCP_ISO15118_SharedCC.csproj" />
     <Project Path="libs/WWCP_ISO15118/WWCP_ISO15118_SLAC/WWCP_ISO15118_SLAC.csproj" />
     <Project Path="libs/WWCP_ISO15118/WWCP_ISO15118_SLAC_Tests/WWCP_ISO15118_SLAC_Tests.csproj" />
+    <Project Path="libs/WWCP_ISO15118/WWCP_ISO15118_T1S/WWCP_ISO15118_T1S.csproj" />
+    <Project Path="libs/WWCP_ISO15118/WWCP_ISO15118_T1S_Tests/WWCP_ISO15118_T1S_Tests.csproj" />
     <Project Path="libs/WWCP_ISO15118/WWCP_ISO15118_V2GTP/WWCP_ISO15118_V2GTP.csproj" />
     <Project Path="libs/WWCP_ISO15118/WWCP_ISO15118_V2GTP_Tests/WWCP_ISO15118_V2GTP_Tests.csproj" />
     <Project Path="libs/WWCP_ISO15118/WWCP_ISO15118_XMLDSig/WWCP_ISO15118_XMLDSig.csproj" />
