@@ -374,7 +374,9 @@ namespace cloud.charging.open.EV
             Console.WriteLine("                    read again at every start, so copying one in is a way to install");
             Console.WriteLine("                    it. The Certificates page manages the same store");
             Console.WriteLine("  --import-certificate <kind>=<file>");
-            Console.WriteLine("                    copy a certificate into the store, as PEM, DER or PKCS#12. May be");
+            Console.WriteLine("                    copy a certificate into the store, as PEM, DER or PKCS#12. A root");
+            Console.WriteLine("                    is a certificate on its own; a credential has to bring its private");
+            Console.WriteLine("                    key, so a PEM for one carries the key beside it. May be");
             Console.WriteLine("                    given several times. <kind> is one of:");
             Console.WriteLine("                      v2gRoot   what a station's certificate must chain to");
             Console.WriteLine("                      moRoot    what a contract certificate must chain to");

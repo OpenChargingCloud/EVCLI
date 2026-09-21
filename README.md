@@ -142,7 +142,13 @@ dotnet run --project EVCLI -- \
 
 Importing a credential also chooses it; importing a root simply makes it
 believed. `--list-certificates` prints every handle, and `--certificates
-<dir>` points the vehicle at another store. Certificates already in the store
+<dir>` points the vehicle at another store.
+
+PEM, DER and PKCS#12 all go in. A root is a certificate on its own; a
+credential has to bring its private key, so a PEM for one holds the key
+beside the certificate and the sub-CAs above it — the file `openssl` writes
+when it is given all three. An encrypted key block is opened with the same
+password a protected PKCS#12 would be. Certificates already in the store
 directory — copied in by hand, restored from a backup — are read again at every
 start and adopted, so putting a file there is a way to install it.
 
