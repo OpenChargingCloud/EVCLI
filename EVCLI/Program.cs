@@ -1269,7 +1269,31 @@ namespace cloud.charging.open.EV
                 Console.WriteLine($"  battery        {vehicle.StateOfCharge_percent:F0} % of {vehicle.BatteryCapacity_kWh:F0} kWh, " +
                                   $"asking for {vehicle.MaxChargingPower_kW:F1} kW up to {vehicle.TargetStateOfCharge_percent:F0} %");
                 Console.WriteLine($"  name servers   {(vehicle.DNSEnabled ? String.Join(", ", vehicle.DNSClient.DNSServers) : "switched off")}");
-                Console.WriteLine($"  time server    {vehicle.NTSClient.Hostname}{(vehicle.NTSEnabled ? "" : " (switched off)")}");
+                #region The time servers
+
+                var bands = vehicle.TimeSources.Bands();
+                var asked = bands.SelectMany(band => band).ToArray();
+
+                if (asked.Length <= 1)
+                    Console.WriteLine($"  time server    {vehicle.NTSClient.Hostname}{(vehicle.NTSEnabled ? "" : " (switched off)")}");
+
+                else
+                {
+
+                    // One line per band, because a band is the unit that is
+                    // asked at once - putting two bands on one line would read
+                    // as six equal servers when it is two and then four.
+                    for (var i = 0; i < bands.Count; i++)
+                        Console.WriteLine((i == 0 ? "  time servers   " : "                 ") +
+                                          String.Join(", ", bands[i].Select(source => source.Hostname.ToString())) +
+                                          (bands.Count > 1 ? $"   (priority {bands[i][0].Priority})" : ""));
+
+                    Console.WriteLine($"                 at least {vehicle.TimeSources.MinServers} of them must answer" +
+                                      (vehicle.NTSEnabled ? "" : " - and NTS is switched off"));
+
+                }
+
+                #endregion
                 Console.WriteLine($"  V2G interface  {DescribeV2GInterface(vehicle.V2GSettings.InterfaceName, candidates)}");
                 Console.WriteLine($"  station        {session.Connect ?? "whichever one answers an SDP request"}");
                 Console.WriteLine($"  session        {session.ProtocolWritten ?? "both"}, " +
