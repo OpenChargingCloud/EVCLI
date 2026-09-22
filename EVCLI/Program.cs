@@ -177,29 +177,6 @@ namespace cloud.charging.open.EV
 
         #endregion
 
-        #region (private static) Abbreviate(Commit)
-
-        /// <summary>
-        /// A commit short enough for a banner, still long enough to find.
-        /// </summary>
-        /// <remarks>
-        /// Seven characters, as git itself abbreviates - and the dirty marker
-        /// survives, because a build from a tree with uncommitted changes is
-        /// not the commit it claims to be and the banner should not pretend
-        /// otherwise.
-        /// </remarks>
-        private static String Abbreviate(String Commit)
-        {
-
-            var dirty  = Commit.EndsWith("-dirty", StringComparison.Ordinal);
-            var hash   = dirty ? Commit[..^6] : Commit;
-
-            return (hash.Length > 7 ? hash[..7] : hash) + (dirty ? "-dirty" : "");
-
-        }
-
-        #endregion
-
         #region (private static) RepositoryRoot()
 
         /// <summary>
@@ -1219,7 +1196,23 @@ namespace cloud.charging.open.EV
                 var builtFrom = BuiltFrom.Repositories.ToArray();
 
                 if (builtFrom.Length > 0)
-                    Console.WriteLine($"  built from     {String.Join("  ", builtFrom.Select(repository => $"{repository.Repository} {Abbreviate(repository.Commit!)}"))}");
+                {
+
+                    // One line each, and the whole hash. This is meant to be read
+                    // out of a bug report and pasted into a checkout, and an
+                    // abbreviation is a thing somebody then has to guess the rest
+                    // of. The column is as wide as the longest name rather than a
+                    // number picked today, so a repository joining later still
+                    // lines up.
+                    var width = builtFrom.Max(repository => repository.Repository!.Length);
+
+                    for (var i = 0; i < builtFrom.Length; i++)
+                        Console.WriteLine((i == 0 ? "  built from     " : "                 ") +
+                                          builtFrom[i].Repository!.PadRight(width) +
+                                          "  " +
+                                          builtFrom[i].Commit);
+
+                }
                 Console.WriteLine($"  accounts       {vehicle.ExtAPI.Users.Count()} user(s) in {vehicle.AccountsPath}");
                 Console.WriteLine($"  sign in at     {vehicle.WebInterfaceURL}{EV.ExtAPIPath.ToString().Trim('/')}/login");
                 Console.WriteLine($"  configuration  {vehicle.ConfigFile.Path}");
