@@ -266,6 +266,16 @@ __pycache__/
 # and does not quietly swallow a source folder of the same name.
 /accounts/
 
+# Its certificate store, for the same reason and with more to lose: whatever
+# is imported here arrives with its private key. Anchored like the accounts.
+#
+# Leaving it untracked was harmless while nothing looked; it is not any more.
+# The build stamp calls a tree dirty when git reports anything at all, so a
+# directory the vehicle writes at every start would mark every build dirty
+# and turn the marker into noise - and a marker nobody believes is worse
+# than none.
+/certificates/
+
 # What a running charging station is configured as: its name servers, its time
 # server and its EVSEs. A property of this particular installation, not of the
 # source.
