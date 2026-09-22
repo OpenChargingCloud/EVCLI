@@ -87,6 +87,7 @@ qemu-system-x86_64 \
 We use two Linux virtual Ethernet bridges, one for management traffic and another one for the simulated ISO 15118 charging cable. As ISO 15118 is **IPv6-only** we do not configure any IPv4 for it. We also do not add the host machine to this Ethernet network. So for ISO 15118 CCS (Combined Charging System) this network will always just have two hosts - the EV and the charging station (EVSE). In contrast to this for ISO 15118 MCS (MegaWatt Charging) there might be additional hosts within this network.
 
 ```
+# The primary management network interface
 auto br1
 iface br1 inet static
         address         10.3.0.1
@@ -102,6 +103,7 @@ iface br1 inet static
         up              /sbin/iptables -t nat -A POSTROUTING -s 10.3.0.0/16  -j MASQUERADE
 
 
+# The ISO 15118 network cable
 auto br2
 iface br2 inet6 manual
 
