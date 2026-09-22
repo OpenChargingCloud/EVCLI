@@ -158,14 +158,25 @@ jobs:
               > "$tmp/console.log" 2>&1 &
           pid=$!
 
-          # curl writes "000" itself when it could not connect, so there is
-          # nothing to add on failure: a second "|| echo 000" would make the
-          # answer "000000", which is not equal to "000", which would end this
-          # loop on its first pass without ever having waited. It did exactly
-          # that in run 35763572789.
+          # Two things have to be true of these two curl calls, and getting one
+          # of them wrong cost a run each.
+          #
+          # They must not add a value of their own on failure: curl -w writes
+          # "000" itself when it could not connect, and a "|| echo 000" behind
+          # it made the answer "000000", which is not equal to "000", which
+          # ended this loop on its first pass without ever having waited.
+          # Run 35763572789.
+          #
+          # And they must not fail the step: this shell runs with -e, so the
+          # assignment carries curl's exit 7 and the script is over before it
+          # has printed a word. Run 35764217384, which exited 7 in silence.
+          #
+          # "|| true" does the second without doing the first: curl has already
+          # written its "000" to stdout by then. The ${:-000} after it is for
+          # the case where there is no curl at all.
           root=000
           for _ in $(seq 1 60); do
-              root="$(curl -sS -o "$tmp/index.html" -w '%{http_code}' http://127.0.0.1:18123/ 2>/dev/null)"
+              root="$(curl -sS -o "$tmp/index.html" -w '%{http_code}' http://127.0.0.1:18123/ 2>/dev/null || true)"
               root="${root:-000}"
               if [ "$root" != 000 ]; then
                   break
@@ -174,7 +185,7 @@ jobs:
               sleep 1
           done
 
-          api="$(curl -sS -o /dev/null -w '%{http_code}' http://127.0.0.1:18123/api/v1/status 2>/dev/null)"
+          api="$(curl -sS -o /dev/null -w '%{http_code}' http://127.0.0.1:18123/api/v1/status 2>/dev/null || true)"
           api="${api:-000}"
 
           kill "$pid" 2>/dev/null || true
