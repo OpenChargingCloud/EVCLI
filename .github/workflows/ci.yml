@@ -1,0 +1,305 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  # Manual runs from the Actions tab ("Run workflow"), same as nightly.yml.
+  workflow_dispatch:
+
+concurrency:
+  # Pull requests: one run per branch, newest wins. Pushes: one run per commit,
+  # and nothing cancels anything — a commit with no verdict is a hole nobody
+  # comes back to fill. Keying the group on the SHA rather than only turning
+  # cancel-in-progress off is what makes that hold for more than two pushes.
+  # The same arrangement as Hermod and the other repositories of this stack.
+  group: ci-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+
+  # ---------------------------------------------------------------------------
+  # The ISO 15118 schemas.
+  #
+  # They are in none of these repositories: they are ISO's, published under a
+  # licence that grants use and not redistribution, so a fresh checkout does not
+  # build until they have been fetched. That makes them a build input like the
+  # SDK, and it makes this a job the others depend on rather than a step inside
+  # them.
+  #
+  # Fetched once per run and handed to both legs, for two reasons. The obvious
+  # one is minutes. The other is that standards.iso.org is somebody else's
+  # server: asking it twice for the same thirty files on every push is not how
+  # one behaves as a guest. The cache takes that further — a run only reaches
+  # ISO when the script itself has changed, which is when the list of URLs has
+  # changed and the answer could genuinely be a different one.
+  #
+  # Note what this makes true: on the days the cache misses, the gate depends on
+  # ISO being reachable. That is not comfortable, but it is honest — the build
+  # depends on those files, and hiding it would only move the failure somewhere
+  # less obvious. nightly.yml deliberately skips the cache, so that "ISO moved
+  # something" is noticed by a night rather than by a push.
+  # ---------------------------------------------------------------------------
+  schemas:
+    runs-on: ubuntu-latest
+    steps:
+
+      - uses: actions/checkout@v7
+
+      # Only this one submodule, and at the commit this repository pins rather
+      # than at its master: the script is a list of ISO's URLs plus the layout
+      # each project expects, and the layout that matters is the one the pinned
+      # commit was written against.
+      - name: The ISO 15118 submodule, at the commit pinned here
+        run: git submodule update --init --depth 1 libs/WWCP_ISO15118
+
+      - name: Schemas fetched for this version of the script before
+        id: cache
+        uses: actions/cache@v6
+        with:
+          path: schemas.tar.gz
+          key: iso15118-schemas-${{ hashFiles('libs/WWCP_ISO15118/tools/download-schemas.sh') }}
+
+      # The script fetches into a temporary directory and then places each
+      # schema where its project expects it, so what is worth keeping is the
+      # placement rather than the download: ten Schemas/ directories, thirty
+      # files. All of them are gitignored, which is why unpacking them into a
+      # checkout later leaves the tree clean — and that matters, because the
+      # build stamps every assembly with what `git status` said, and one stray
+      # schema would make this whole run read "-dirty".
+      - name: Fetch them from ISO
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          bash libs/WWCP_ISO15118/tools/download-schemas.sh
+          tar -czf schemas.tar.gz $(find libs/WWCP_ISO15118 -type d -name Schemas | sort)
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: iso15118-schemas
+          path: schemas.tar.gz
+          # Read by the next job of the same run, and by nothing else.
+          retention-days: 1
+
+
+  # ---------------------------------------------------------------------------
+  # One leg per platform this vehicle is used on:
+  #
+  #  * Windows, because that is where it is developed and where a session is
+  #    driven by hand. It is also where the .NET TLS backend cannot carry the
+  #    -20 profile at all, a difference the code knows about and says so.
+  #  * Debian 13, because that is what it is deployed on — the test environment
+  #    in LinuxTestEnvironment.md installs exactly this, and ISO 15118 only does
+  #    anything real on a machine with a second interface on a bridge. GitHub
+  #    has no Debian runner image, so this leg is an Ubuntu runner carrying a
+  #    debian:13 container.
+  #
+  # fail-fast is off on purpose: "red on exactly one platform" is the most
+  # valuable thing a two-leg matrix produces, so one leg must not cancel the
+  # other.
+  # ---------------------------------------------------------------------------
+  build-and-test:
+    needs: schemas
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            leg: windows-latest
+          - os: ubuntu-latest
+            container: debian:13
+            leg: debian-13-container
+    runs-on: ${{ matrix.os }}
+    container: ${{ matrix.container }}
+    steps:
+
+      # Before the checkout, not after it. The deepest file below this clone
+      # root sits 143 characters down, and under the classic 260-character
+      # limit a submodule checkout gives up halfway through with "Filename too
+      # long" — the same thing the README warns about for a clone by hand.
+      - name: Allow long paths (Windows)
+        if: runner.os == 'Windows'
+        run: git config --system core.longpaths true
+
+      # Also before the checkout, and for a sharper reason: git itself. The bare
+      # debian:13 image has none, and actions/checkout without git falls back to
+      # downloading a tarball over the REST API — which cannot bring submodules,
+      # so the failure would arrive much later, as a missing Hermod.
+      #
+      # The rest is what .NET and Node need on a bare Debian: curl for the
+      # install scripts, ICU and tzdata for globalization, OpenSSL for crypto,
+      # ca-certificates for NuGet over HTTPS, and xz-utils because the Node
+      # tarball is a .tar.xz that Debian's tar cannot open without it.
+      - name: Install prerequisites (Debian container)
+        if: runner.os == 'Linux'
+        run: apt-get update && apt-get install -y --no-install-recommends ca-certificates curl git libicu76 libssl3t64 libstdc++6 tzdata xz-utils
+
+      # The libraries are submodules here, unlike in Hermod and Norn where
+      # sibling repositories are checked out beside each other and float on
+      # master. Here they are pinned, and testing them as pinned is the point:
+      # this repository's own question is whether this particular combination of
+      # six libraries works together. nightly.yml asks the other question.
+      - uses: actions/checkout@v7
+        with:
+          submodules: recursive
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: iso15118-schemas
+
+      # And then take the tarball away again. It would otherwise sit in the
+      # workspace as an untracked file, and the build asks `git status` what
+      # this tree looks like: one leftover archive would stamp every assembly
+      # of this run "-dirty", which is the one thing that stamp exists to mean.
+      - name: Put the schemas where the build expects them
+        shell: bash
+        run: |
+          tar -xzf schemas.tar.gz
+          rm schemas.tar.gz
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.x'
+
+      # The web interface is built by npm and webpack from inside the .NET build
+      # — EV.csproj runs "npm install" and "npm run build" and then embeds
+      # dist/ as assembly resources — so Node is not optional on either leg.
+      # 24.x rather than what Debian ships: package.json asks for 22 or newer,
+      # and the frontend's tests are run by node itself directly on .ts files,
+      # which needs a Node new enough to strip types without being asked.
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24.x'
+
+      # The whole solution rather than only EVCLI: forty-two projects across six
+      # submodules, and "they still compile together at these gitlinks" is the
+      # one statement this repository is uniquely able to make.
+      - name: Build
+        run: dotnet build EVCLI.slnx --configuration Release
+
+      # What the .NET build does not cover. webpack type-checks the modules it
+      # can reach from the entry point, which leaves out the test files and
+      # anything not imported yet; and the frontend's own tests are run by node,
+      # so nothing in a dotnet build would ever execute them.
+      #
+      # node_modules is already there — the build put it there — so this costs
+      # seconds. One leg, because TypeScript does not know which platform it is
+      # on, and a second run would only make one red look like two failures.
+      - name: The web interface (type checks and its own tests)
+        if: matrix.leg == 'debian-13-container'
+        working-directory: libs/EV/EV/Frontend
+        run: |
+          npm run typecheck
+          npm run typecheck:test
+          npm test
+
+      # The vehicle's own tests: the configuration it reads and writes, the
+      # certificate store, the choice of V2G interface, the time-source group.
+      # Nowhere else runs them — libs/EV has no workflow of its own, by design:
+      # it is not built alone, it is built here.
+      #
+      # No category filter. Nothing in this project queries the network, so
+      # there is no set to keep out of a gate. Where a test cannot hold on a
+      # platform it says so itself with Assert.Ignore, which is a skip in the
+      # .trx rather than a silent absence.
+      - name: Test the vehicle
+        timeout-minutes: 30
+        run: dotnet test libs/EV/EVTests/EVTests.csproj --configuration Release --no-build --logger "console;verbosity=normal" --logger "trx;LogFileName=${{ matrix.leg }}.trx" --results-directory artifacts
+
+      # The question no unit test in this repository asks: does it start?
+      # Everything that only happens at startup happens here — the assemblies of
+      # six libraries resolve, Hermod binds its HTTP server, the HTTPExt API
+      # builds an account store out of nothing, and the web interface turns out
+      # to be inside the assembly rather than merely to have been built. That
+      # last one earns the minute on its own: the build fails when webpack
+      # produces nothing, but not when the embedding names its resources wrongly.
+      #
+      # Linux only. It is the platform the vehicle is deployed on, and starting
+      # a process in the background, waiting for it and stopping it again is one
+      # shell to get right rather than two. The Windows leg answers the smaller
+      # question below.
+      #
+      # Everything it writes goes to a temporary directory: a first start makes
+      # an account store, a configuration file and a certificate store, and none
+      # of that belongs in a workspace whose cleanliness the build stamps into
+      # every assembly it produces.
+      #
+      # Two questions are asked of it, and the second is not an afterthought.
+      # "/" must come back as the embedded web interface, which is what proves
+      # the bundle is inside the assembly. "/api/v1/status" must come back 401,
+      # because the JSON API of a vehicle is nobody's business until somebody
+      # has signed in — a 200 there would mean the door had come off, and that
+      # is a failure no unit test in this repository would notice.
+      - name: The vehicle starts and answers (Debian)
+        if: matrix.leg == 'debian-13-container'
+        timeout-minutes: 5
+        shell: bash
+        run: |
+          set -u
+          tmp="$(mktemp -d)"
+          dotnet EVCLI/bin/Release/net10.0/EVCLI.dll \
+              --port          18123 \
+              --accounts      "$tmp/accounts" \
+              --config        "$tmp/configuration.json" \
+              --certificates  "$tmp/certificates" \
+              > "$tmp/console.log" 2>&1 &
+          pid=$!
+
+          root=000
+          for _ in $(seq 1 60); do
+              root="$(curl -sS -o "$tmp/index.html" -w '%{http_code}' http://127.0.0.1:18123/ 2>/dev/null || echo 000)"
+              if [ "$root" != 000 ]; then
+                  break
+              fi
+              # Gone rather than slow: stop waiting for it.
+              kill -0 "$pid" 2>/dev/null || break
+              sleep 1
+          done
+
+          api="$(curl -sS -o /dev/null -w '%{http_code}' http://127.0.0.1:18123/api/v1/status 2>/dev/null || echo 000)"
+
+          kill "$pid" 2>/dev/null || true
+          wait "$pid" 2>/dev/null || true
+
+          echo "GET /                -> $root"
+          echo "GET /api/v1/status   -> $api"
+
+          fault=0
+          if [ "$root" != 200 ]; then
+              echo "The web interface did not answer."
+              fault=1
+          elif ! grep -q "Electric Vehicle" "$tmp/index.html"; then
+              echo "Something answered, but it is not the embedded web interface."
+              fault=1
+          fi
+          if [ "$api" != 401 ]; then
+              echo "The JSON API answered $api where 401 was expected: it is supposed to be shut to anyone not signed in."
+              fault=1
+          fi
+
+          if [ "$fault" != 0 ]; then
+              echo
+              echo "What it said, without the first-start password:"
+              grep -v -i password "$tmp/console.log" || true
+              exit 1
+          fi
+
+      # The same question in the form the other leg can answer without process
+      # control: the entry assembly loads, its arguments parse, it exits 0.
+      - name: The vehicle runs (Windows)
+        if: runner.os == 'Windows'
+        run: dotnet EVCLI/bin/Release/net10.0/EVCLI.dll --help
+
+      # The console log answers "did it pass" and almost nothing else. TRX keeps,
+      # per test: outcome, duration, error message, stack trace, and the reason
+      # an Assert.Ignore gave — which never reaches the console at all.
+      #
+      # !cancelled() rather than success(): a red run is when these files matter
+      # most, so uploading only on green would throw the evidence away in
+      # exactly the case it is wanted.
+      - name: Upload test results
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-results-${{ matrix.leg }}
+          path: artifacts/*.trx

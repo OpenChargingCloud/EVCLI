@@ -1,5 +1,8 @@
 # EVCLI
 
+[![CI](https://github.com/OpenChargingCloud/EVCLI/actions/workflows/ci.yml/badge.svg)](https://github.com/OpenChargingCloud/EVCLI/actions/workflows/ci.yml)
+[![Nightly](https://github.com/OpenChargingCloud/EVCLI/actions/workflows/nightly.yml/badge.svg)](https://github.com/OpenChargingCloud/EVCLI/actions/workflows/nightly.yml)
+
 One simulated electric vehicle, with a web interface, until Ctrl+C.
 
 It is the counterpart of
@@ -106,6 +109,14 @@ time. IPv6 literals must be bracketed: `[fe80::1%eth0]:15118`. An unbracketed
 `::1:15118` is a valid address in its own right, so splitting it at the last
 colon would connect somewhere else entirely.
 
+That station runs beside the vehicle on loopback, which is everything for the
+message exchange and nothing at all for the wire: SDP discovery, link-local
+addressing and the interface the powerline modem sits on only mean something
+between two machines sharing one Ethernet segment.
+[LinuxTestEnvironment.md](LinuxTestEnvironment.md) sets that up — KVM guests on
+a Linux host, a bridge for management and a second, IPv6-only bridge standing
+in for the charging cable.
+
 ### Certificates
 
 Everything this vehicle believes and everything it presents lives in one store,
@@ -189,6 +200,8 @@ without rebuilding the C# side.
 | `libs/EV/EV/Certificates/` | the certificate store: what is in it, and what may go in |
 | `libs/EV/EVTests/` | what the configuration may say, and what it may not |
 | `libs/WWCP_ISO15118/` | the protocol: SDP, SLAC, the 10BASE-T1S bus, V2GTP, the EXI codec, the session state machines |
+| `LinuxTestEnvironment.md` | two virtual machines and two bridges, for a session over a wire rather than over loopback |
+| `.github/workflows/` | what runs on every push, and what runs at night |
 
 The command line is this program's vocabulary and nothing else. What a vehicle
 *is*, and what it does, lives in `libs/EV`.

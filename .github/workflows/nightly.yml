@@ -1,0 +1,358 @@
+name: Nightly
+
+# The counterpart to ci.yml. That workflow gates every push and keeps itself
+# narrow on purpose: the vehicle's own tests, the web interface, and one start.
+# This one asks the two questions a gate should not be asked.
+#
+# The first is wider: every test of every library in this solution, at the
+# gitlinks this repository pins. Each library gates its own tests in its own
+# repository, but nobody there tests this combination of them — Hermod's suite
+# against this Styx, against this Norn, in one process.
+#
+# The second is the opposite of pinning: the submodules moved to their tips, to
+# find out whether advancing the gitlinks would work before somebody advances
+# them. Hermod and Norn get that for free by building their siblings from
+# master; this repository pins, so it has to go and ask.
+#
+# Two things worth knowing about scheduled workflows: they only ever run on the
+# default branch, and GitHub disables them after 60 days without any repository
+# activity. If this stops reporting, that is the first thing to check.
+on:
+  schedule:
+    # 03:17 UTC, an hour after the libraries of this stack run theirs. Not on
+    # the hour, because GitHub's scheduler is busiest then and delays runs by
+    # tens of minutes — and an hour later than Hermod, Norn and Urdr so that a
+    # morning is read in the order the dependencies are stacked: if a library
+    # went red at 02:17, this night's red is already explained.
+    - cron: '17 3 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: nightly-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+
+  # ---------------------------------------------------------------------------
+  # The same schema fetch as ci.yml, deliberately without its cache.
+  #
+  # The gate reaches standards.iso.org only when the script changed, which is
+  # right for something that runs on every push. But that also means the gate
+  # would not notice for months if ISO moved a file, renamed a directory or
+  # published a corrected schema. Once a night is the proportionate place to
+  # find that out — from a night that goes red at 03:17 rather than from
+  # somebody's clone failing to build on a Tuesday.
+  # ---------------------------------------------------------------------------
+  schemas:
+    runs-on: ubuntu-latest
+    steps:
+
+      - uses: actions/checkout@v7
+
+      - name: The ISO 15118 submodule, at the commit pinned here
+        run: git submodule update --init --depth 1 libs/WWCP_ISO15118
+
+      - name: Fetch the schemas from ISO
+        run: |
+          bash libs/WWCP_ISO15118/tools/download-schemas.sh
+          tar -czf schemas.tar.gz $(find libs/WWCP_ISO15118 -type d -name Schemas | sort)
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: iso15118-schemas
+          path: schemas.tar.gz
+          retention-days: 1
+
+
+  # ---------------------------------------------------------------------------
+  # Everything, at the pinned gitlinks. Same two legs as ci.yml — see there for
+  # why it is exactly Windows and a debian:13 container.
+  # ---------------------------------------------------------------------------
+  full-suite:
+    needs: schemas
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            leg: windows-latest
+          - os: ubuntu-latest
+            container: debian:13
+            leg: debian-13-container
+    runs-on: ${{ matrix.os }}
+    container: ${{ matrix.container }}
+    steps:
+
+      - name: Allow long paths (Windows)
+        if: runner.os == 'Windows'
+        run: git config --system core.longpaths true
+
+      - name: Install prerequisites (Debian container)
+        if: runner.os == 'Linux'
+        run: apt-get update && apt-get install -y --no-install-recommends ca-certificates curl git libicu76 libssl3t64 libstdc++6 tzdata xz-utils
+
+      - uses: actions/checkout@v7
+        with:
+          submodules: recursive
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: iso15118-schemas
+
+      # And then take the tarball away again. It would otherwise sit in the
+      # workspace as an untracked file, and the build asks `git status` what
+      # this tree looks like: one leftover archive would stamp every assembly
+      # of this run "-dirty", which is the one thing that stamp exists to mean.
+      - name: Put the schemas where the build expects them
+        shell: bash
+        run: |
+          tar -xzf schemas.tar.gz
+          rm schemas.tar.gz
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.x'
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24.x'
+
+      - name: Build
+        run: dotnet build EVCLI.slnx --configuration Release
+
+      # Every test project in the solution, which is what makes this different
+      # from the gate: EVTests plus Styx, Hermod, Norn, Urdr and the eight ISO
+      # 15118 suites, all against each other at the versions pinned here.
+      #
+      # Three categories left out, and they are somebody else's decision rather
+      # than ours: Hermod marks its live DNS probes "LiveDNS", Norn marks its
+      # real NTS-KE and NTP handshakes "External" and "LiveNetwork". All of them
+      # query Cloudflare, Google, PTB and Netnod for real. A hosted runner is
+      # not a normal client — datacentre egress on UDP/53 and UDP/123 is
+      # commonly blocked or rate-limited — so they would fail here for reasons
+      # that say nothing about any of this code. Their own repositories run them
+      # where that has been thought through; this night does not pretend to.
+      #
+      # Fatal, unlike the two steps further down: a red here is a real
+      # regression in a combination this repository is responsible for.
+      - name: Test everything, as pinned
+        timeout-minutes: 120
+        run: dotnet test EVCLI.slnx --configuration Release --no-build --filter "TestCategory!=LiveDNS&TestCategory!=External&TestCategory!=LiveNetwork" --logger "console;verbosity=normal" --logger "trx;LogFileName=${{ matrix.leg }}.trx" --results-directory artifacts
+
+      # The same start as in ci.yml, for the same reason and on the same leg.
+      # Repeating it costs a minute and catches the kind of failure that only
+      # shows up when nobody pushed: a certificate that expired overnight, a
+      # dependency resolved at restore time that moved.
+      - name: The vehicle starts and answers (Debian)
+        if: matrix.leg == 'debian-13-container'
+        timeout-minutes: 5
+        shell: bash
+        run: |
+          set -u
+          tmp="$(mktemp -d)"
+          dotnet EVCLI/bin/Release/net10.0/EVCLI.dll \
+              --port          18123 \
+              --accounts      "$tmp/accounts" \
+              --config        "$tmp/configuration.json" \
+              --certificates  "$tmp/certificates" \
+              > "$tmp/console.log" 2>&1 &
+          pid=$!
+
+          root=000
+          for _ in $(seq 1 60); do
+              root="$(curl -sS -o "$tmp/index.html" -w '%{http_code}' http://127.0.0.1:18123/ 2>/dev/null || echo 000)"
+              if [ "$root" != 000 ]; then
+                  break
+              fi
+              kill -0 "$pid" 2>/dev/null || break
+              sleep 1
+          done
+
+          api="$(curl -sS -o /dev/null -w '%{http_code}' http://127.0.0.1:18123/api/v1/status 2>/dev/null || echo 000)"
+
+          kill "$pid" 2>/dev/null || true
+          wait "$pid" 2>/dev/null || true
+
+          echo "GET /                -> $root"
+          echo "GET /api/v1/status   -> $api"
+
+          fault=0
+          if [ "$root" != 200 ]; then
+              echo "The web interface did not answer."
+              fault=1
+          elif ! grep -q "Electric Vehicle" "$tmp/index.html"; then
+              echo "Something answered, but it is not the embedded web interface."
+              fault=1
+          fi
+          if [ "$api" != 401 ]; then
+              echo "The JSON API answered $api where 401 was expected: it is supposed to be shut to anyone not signed in."
+              fault=1
+          fi
+
+          if [ "$fault" != 0 ]; then
+              echo
+              echo "What it said, without the first-start password:"
+              grep -v -i password "$tmp/console.log" || true
+              exit 1
+          fi
+
+      # The NuGet packages of the whole solution, transitives included. One leg,
+      # because this is a property of the dependency graph and not of the
+      # operating system; printing it on both would only make a night look like
+      # it had found two of everything.
+      #
+      # Informational, and that is the part worth insisting on: an advisory
+      # published overnight is news about the world, not a regression here — the
+      # same commit that was green yesterday is affected today without a line
+      # having changed. That is also why it lives in the night and not in the
+      # gate: a gate that can go red for something no push caused stops being
+      # read as a gate.
+      - name: Known vulnerabilities (informational)
+        if: ${{ matrix.leg == 'debian-13-container' && !cancelled() }}
+        continue-on-error: true
+        shell: bash
+        run: |
+          set +e
+          {
+            echo '## Known vulnerabilities (informational)'
+            echo
+            echo 'Every project of the solution, transitive packages included.'
+            echo 'Informational: an advisory published overnight is news, not a'
+            echo 'regression, so this step cannot turn the night red.'
+            echo
+            echo '```'
+            dotnet list EVCLI.slnx package --vulnerable --include-transitive 2>&1 \
+              | grep -v "has no vulnerable packages given the current sources" \
+              | tail -60
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit 0
+
+      - name: Upload test results
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-results-${{ matrix.leg }}
+          path: artifacts/*.trx
+
+
+  # ---------------------------------------------------------------------------
+  # The other question: what would happen if the gitlinks were advanced today?
+  #
+  # Hermod and Norn build their dependencies from master and are therefore told
+  # about a breaking change upstream on the day it lands, whether or not anybody
+  # touched them. This repository pins, which is right for something that is
+  # deployed — but it means an upstream change is invisible here until somebody
+  # advances a gitlink and finds out by hand. That is exactly what this job does
+  # instead, every night and without changing anything.
+  #
+  # Informational throughout. A red here is news about a library, not a
+  # regression in this repository: the pinned combination is what CI gates, and
+  # it is unaffected. What this is for is the morning before the gitlinks move.
+  #
+  # One leg, because "does the new Hermod still compile against this vehicle" is
+  # not a question about the operating system.
+  # ---------------------------------------------------------------------------
+  submodules-at-their-tips:
+    needs: schemas
+    runs-on: ubuntu-latest
+    container: debian:13
+    steps:
+
+      # unzip on top of what the other legs need: this job fetches the schemas
+      # a second time, with the script as the tip writes it, and Amendment 1
+      # arrives from ISO as a zip archive.
+      - name: Install prerequisites
+        run: apt-get update && apt-get install -y --no-install-recommends ca-certificates curl git libicu76 libssl3t64 libstdc++6 tzdata unzip xz-utils
+
+      # Full history rather than the usual shallow one: counting how far each
+      # submodule has moved needs the commits in between to exist.
+      - uses: actions/checkout@v7
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: iso15118-schemas
+
+      - name: Put the schemas where the build expects them
+        run: |
+          tar -xzf schemas.tar.gz
+          rm schemas.tar.gz
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.x'
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24.x'
+
+      # git submodule status prints "<sha> <path> (<describe>)", the sha carrying
+      # a leading + or - when the checkout does not match the pin. Remembered
+      # before anything moves, so that afterwards each one can be asked how far
+      # it went.
+      #
+      # --remote is what makes this a different question from a plain update: it
+      # ignores the sha recorded here and takes the tip of the submodule's
+      # remote HEAD, which for all six of these is master. Not --recursive:
+      # none of them has submodules of its own.
+      - name: Move every submodule to its tip
+        shell: bash
+        run: |
+          git submodule status | awk '{ print $2, $1 }' > "$RUNNER_TEMP/pinned.txt"
+          git submodule update --remote
+          {
+            echo '## The submodules at their tips'
+            echo
+            echo 'What has happened upstream since the gitlinks here were last advanced.'
+            echo
+            echo '```'
+            while read -r path sha; do
+              sha="${sha#[+-]}"
+              ahead="$(git -C "$path" rev-list --count "$sha"..HEAD 2>/dev/null || echo '?')"
+              printf '%-26s %4s commit(s) ahead   %s\n' "$path" "$ahead" "$(git -C "$path" rev-parse HEAD)"
+            done < "$RUNNER_TEMP/pinned.txt"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # The schemas were unpacked before the submodules moved, so if the tip of
+      # the ISO 15118 repository changed where a project expects them, they are
+      # now in the wrong place. Laying them out again from the tip's own script
+      # is the point rather than a nuisance: that relocation is precisely the
+      # kind of upstream change this job exists to find.
+      #
+      # Not fatal, because this reaches standards.iso.org a second time in one
+      # night and an unreachable ISO says nothing about any library. What was
+      # unpacked above then stands, and the build below runs against the layout
+      # the pinned commit wanted — which is right in every case except the one
+      # where the tip moved a schema, and that one will simply fail to compile
+      # with a message naming the file.
+      - name: Lay the schemas out again, the way the tip wants them
+        continue-on-error: true
+        run: bash libs/WWCP_ISO15118/tools/download-schemas.sh
+
+      - name: Build against the tips (informational)
+        id: build
+        continue-on-error: true
+        run: dotnet build EVCLI.slnx --configuration Release
+
+      - name: Test against the tips (informational)
+        if: steps.build.outcome == 'success'
+        continue-on-error: true
+        timeout-minutes: 120
+        run: dotnet test EVCLI.slnx --configuration Release --no-build --filter "TestCategory!=LiveDNS&TestCategory!=External&TestCategory!=LiveNetwork" --logger "console;verbosity=normal"
+
+      - name: Say how it went
+        if: ${{ !cancelled() }}
+        shell: bash
+        run: |
+          {
+            echo
+            echo "Build against the tips: ${{ steps.build.outcome }}"
+            echo
+            echo 'Informational. The gitlinks in this repository are unchanged and'
+            echo 'CI gates them as they are; this only says what advancing them'
+            echo 'would cost today.'
+          } >> "$GITHUB_STEP_SUMMARY"
