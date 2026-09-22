@@ -2,16 +2,16 @@
 #
 # Start the vehicle with whatever was passed here, e.g.
 #
-#   ./run.sh --any --sdp
+#   ./run.sh --any --port 2347
 #
 # --help lists the switches.
-
-cd libs
-cd Styx;   versionHash_Styx=$(git rev-list --max-count=1 HEAD);   cd ..
-cd Hermod; versionHash_Hermod=$(git rev-list --max-count=1 HEAD); cd ..
-cd ..
+#
+# Nothing is collected here any more: every assembly carries the commit it was
+# built from and the banner prints them. That is also what makes --no-build
+# safe now - a stale binary says so itself, instead of being described by
+# hashes read from a working tree it was never built from.
 
 set -e
 cd "$(dirname "$0")"
 
-dotnet run --no-build --no-restore --project ChargingStationCLI -- $versionHash_Styx $versionHash_Hermod
+dotnet run --no-build --no-restore --project EVCLI -- "$@"
