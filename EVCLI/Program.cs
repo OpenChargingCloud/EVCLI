@@ -26,6 +26,7 @@ using org.GraphDefined.Vanaheimr.Hermod.HTTP;
 
 using cloud.charging.open.protocols.ISO15118.SDP.Messages;
 using cloud.charging.open.protocols.ISO15118.SharedCC;
+using cloud.charging.open.protocols.ISO15118.NetworkInterfaces;
 using cloud.charging.open.protocols.ISO15118.StateMachines;
 
 using cloud.charging.open.EV.Certificates;
@@ -172,6 +173,54 @@ namespace cloud.charging.open.EV
 
             Value = total;
             return true;
+
+        }
+
+        #endregion
+
+        #region (private static) DescribeV2GInterface(Configured, Candidates)
+
+        /// <summary>
+        /// Which interface a discovery would use, and - when nobody said -
+        /// what made it that one.
+        /// </summary>
+        /// <remarks>
+        /// A guess that does not announce itself is how somebody spends an
+        /// afternoon wondering which cable is in use, so the reason is part of
+        /// the answer rather than something to go and read in the source.
+        /// </remarks>
+        private static String DescribeV2GInterface(String?                            Configured,
+                                                   IReadOnlyList<V2GNetworkInterface>  Candidates)
+        {
+
+            if (Configured is not null)
+                return Configured;
+
+            if (Candidates.Count == 0)
+                return "none - this machine has no interface that could carry V2G traffic";
+
+            var chosen = V2GLink.Choose(Candidates);
+
+            if (chosen is null)
+                return "none";
+
+            if (Candidates.Count == 1)
+                return chosen.Name;
+
+            var others       = String.Join(", ", Candidates.Select(candidate => candidate.Name));
+            var withoutIPv4  = Candidates.Where(candidate => !candidate.HasIPv4Address).ToArray();
+
+            return withoutIPv4.Length switch {
+
+                       1  => $"{chosen.Name} (the only one of {others} without an IPv4 address)",
+
+                       // Narrowed but not decided: say both, so that nobody reads
+                       // a coin toss as a conclusion. --interface settles it.
+                       > 1 => $"{chosen.Name} (first of {String.Join(", ", withoutIPv4.Select(candidate => candidate.Name))}, which have no IPv4 address)",
+
+                       _  => $"{chosen.Name} (first of {others} - every one of them has an IPv4 address)"
+
+                   };
 
         }
 
@@ -1221,10 +1270,7 @@ namespace cloud.charging.open.EV
                                   $"asking for {vehicle.MaxChargingPower_kW:F1} kW up to {vehicle.TargetStateOfCharge_percent:F0} %");
                 Console.WriteLine($"  name servers   {(vehicle.DNSEnabled ? String.Join(", ", vehicle.DNSClient.DNSServers) : "switched off")}");
                 Console.WriteLine($"  time server    {vehicle.NTSClient.Hostname}{(vehicle.NTSEnabled ? "" : " (switched off)")}");
-                Console.WriteLine($"  V2G interface  {vehicle.V2GSettings.InterfaceName ?? "whichever one comes first"}" +
-                                  (candidates.Count > 0
-                                       ? $" (of {String.Join(", ", candidates.Select(candidate => candidate.Name))})"
-                                       : " - and this machine has none that could carry V2G traffic"));
+                Console.WriteLine($"  V2G interface  {DescribeV2GInterface(vehicle.V2GSettings.InterfaceName, candidates)}");
                 Console.WriteLine($"  station        {session.Connect ?? "whichever one answers an SDP request"}");
                 Console.WriteLine($"  session        {session.ProtocolWritten ?? "both"}, " +
                                   $"{(session.ModeWritten ?? "dc").ToUpperInvariant()}, " +
