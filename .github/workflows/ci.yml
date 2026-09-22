@@ -245,9 +245,15 @@ jobs:
               > "$tmp/console.log" 2>&1 &
           pid=$!
 
+          # curl writes "000" itself when it could not connect, so there is
+          # nothing to add on failure: a second "|| echo 000" would make the
+          # answer "000000", which is not equal to "000", which would end this
+          # loop on its first pass without ever having waited. It did exactly
+          # that in run 35763572789.
           root=000
           for _ in $(seq 1 60); do
-              root="$(curl -sS -o "$tmp/index.html" -w '%{http_code}' http://127.0.0.1:18123/ 2>/dev/null || echo 000)"
+              root="$(curl -sS -o "$tmp/index.html" -w '%{http_code}' http://127.0.0.1:18123/ 2>/dev/null)"
+              root="${root:-000}"
               if [ "$root" != 000 ]; then
                   break
               fi
@@ -256,7 +262,8 @@ jobs:
               sleep 1
           done
 
-          api="$(curl -sS -o /dev/null -w '%{http_code}' http://127.0.0.1:18123/api/v1/status 2>/dev/null || echo 000)"
+          api="$(curl -sS -o /dev/null -w '%{http_code}' http://127.0.0.1:18123/api/v1/status 2>/dev/null)"
+          api="${api:-000}"
 
           kill "$pid" 2>/dev/null || true
           wait "$pid" 2>/dev/null || true
@@ -279,8 +286,13 @@ jobs:
 
           if [ "$fault" != 0 ]; then
               echo
+              if kill -0 "$pid" 2>/dev/null; then
+                  echo "It was still running when it was asked."
+              else
+                  echo "It was no longer running when it was asked."
+              fi
               echo "What it said, without the first-start password:"
-              grep -v -i password "$tmp/console.log" || true
+              cat "$tmp/console.log" | grep -v -i password || echo "(nothing at all)"
               exit 1
           fi
 
