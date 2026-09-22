@@ -177,6 +177,29 @@ namespace cloud.charging.open.EV
 
         #endregion
 
+        #region (private static) Abbreviate(Commit)
+
+        /// <summary>
+        /// A commit short enough for a banner, still long enough to find.
+        /// </summary>
+        /// <remarks>
+        /// Seven characters, as git itself abbreviates - and the dirty marker
+        /// survives, because a build from a tree with uncommitted changes is
+        /// not the commit it claims to be and the banner should not pretend
+        /// otherwise.
+        /// </remarks>
+        private static String Abbreviate(String Commit)
+        {
+
+            var dirty  = Commit.EndsWith("-dirty", StringComparison.Ordinal);
+            var hash   = dirty ? Commit[..^6] : Commit;
+
+            return (hash.Length > 7 ? hash[..7] : hash) + (dirty ? "-dirty" : "");
+
+        }
+
+        #endregion
+
         #region (private static) RepositoryRoot()
 
         /// <summary>
@@ -1187,6 +1210,16 @@ namespace cloud.charging.open.EV
                 Console.WriteLine($"  JSON API       {vehicle.WebInterfaceURL}api/v1/status");
                 Console.WriteLine($"  event stream   {vehicle.WebInterfaceURL}api/v1/events");
                 Console.WriteLine($"  frontend from  {vehicle.Frontend.Description}");
+
+                // What this binary actually is, for whoever reads a bug report.
+                // Read out of the assemblies rather than handed in on the command
+                // line: the command line describes the working tree at startup,
+                // these describe the trees each part was compiled from, and after
+                // a checkout without a rebuild those are not the same answer.
+                var builtFrom = BuiltFrom.Repositories.ToArray();
+
+                if (builtFrom.Length > 0)
+                    Console.WriteLine($"  built from     {String.Join("  ", builtFrom.Select(repository => $"{repository.Repository} {Abbreviate(repository.Commit!)}"))}");
                 Console.WriteLine($"  accounts       {vehicle.ExtAPI.Users.Count()} user(s) in {vehicle.AccountsPath}");
                 Console.WriteLine($"  sign in at     {vehicle.WebInterfaceURL}{EV.ExtAPIPath.ToString().Trim('/')}/login");
                 Console.WriteLine($"  configuration  {vehicle.ConfigFile.Path}");
