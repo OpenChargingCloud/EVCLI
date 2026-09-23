@@ -332,6 +332,7 @@ namespace cloud.charging.open.EV
         {
             Console.WriteLine("Usage: EVCLI [--port <number>] [--any] [--frontend <dist directory>]");
             Console.WriteLine("             [--accounts <dir>] [--config <file>] [--verbose | --quiet] [--no-trace]");
+            Console.WriteLine("             [--log-file <dir>] [--no-log-file]");
             Console.WriteLine("             [--name <name>] [--vin <vin>]");
             Console.WriteLine("             [--battery <kWh>] [--soc <percent>] [--target-soc <percent>]");
             Console.WriteLine("             [--power <kW>] [--taper-from <percent>]");
@@ -492,6 +493,12 @@ namespace cloud.charging.open.EV
             Console.WriteLine();
             Console.WriteLine("Whatever the console shows, the web interface shows the whole log under 'Logs'.");
             Console.WriteLine();
+            Console.WriteLine($"  --log-file <dir>  where the log files go (default: {EV.DefaultLogPath}/ below the repository");
+            Console.WriteLine("                    root). One file per day, every entry down to the debug ones, and");
+            Console.WriteLine("                    nothing is ever deleted.");
+            Console.WriteLine("      --no-log-file do not write one. Then what the console did not show, and what");
+            Console.WriteLine("                    falls out of the web interface's last 2000 entries, is gone.");
+            Console.WriteLine();
             Console.WriteLine("Once it is up, the console is a prompt: 'help' lists what can be typed there,");
             Console.WriteLine("Tab completes it, and 'quit' or Ctrl+C stops the vehicle. Started where there is");
             Console.WriteLine("no terminal on the input - from a script, under a service manager, in CI - there");
@@ -512,6 +519,8 @@ namespace cloud.charging.open.EV
             var      anyAddress     = false;
             String?  frontendDir    = null;
             String?  accountsPath   = null;
+            String?  logPath        = null;
+            var      noLogFile      = false;
             String?  configFilePath = null;
             var      verbose        = false;
             var      quiet          = false;
@@ -604,6 +613,18 @@ namespace cloud.charging.open.EV
                             Console.Error.WriteLine("Missing directory after --accounts!");
                             return 2;
                         }
+                        break;
+
+                    case "--log-file":
+                        if (!TryTakeValue(Arguments, ref i, out logPath))
+                        {
+                            Console.Error.WriteLine("Missing directory after --log-file!");
+                            return 2;
+                        }
+                        break;
+
+                    case "--no-log-file":
+                        noLogFile = true;
                         break;
 
                     case "--config":
@@ -1028,6 +1049,15 @@ namespace cloud.charging.open.EV
                               ConsoleLogLevel:  verbose ? LogLevel.Debug
                                                     : quiet ? LogLevel.Warning
                                                     : LogLevel.Info,
+
+                              // On unless it is switched off. A console nobody
+                              // was watching kept nothing, and the log a
+                              // browser shows goes with the process - so the
+                              // one place an afternoon's question can still be
+                              // answered from is a file.
+                              LogPath:          noLogFile
+                                                    ? null
+                                                    : logPath ?? Path.Combine(RepositoryRoot(), EV.DefaultLogPath),
 
                               BridgeDebugLog:   !noTrace
 

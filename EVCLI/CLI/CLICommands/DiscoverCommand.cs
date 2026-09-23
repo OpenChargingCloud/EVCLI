@@ -135,8 +135,21 @@ namespace cloud.charging.open.EV.CommandLine
             if (Arguments.Length > 2)
                 return [ $"Usage: {Help()}" ];
 
+            var wanted = Arguments.Length == 2 ? Arguments[1] : null;
+
+            // Said before the discovery rather than after it, and said at all
+            // because the log is a log book: the SDP entries below record what
+            // went out on the wire, and nothing in them says who asked for it.
+            // The web interface writes the same line naming the user who
+            // pressed the button; here it is whoever is at the console.
+            cli.Vehicle.Log.Info(
+                $"A discovery was asked for at the command line, " +
+                $"{(wanted is null ? "on this vehicle's configured interface" : $"on '{wanted}'")}.",
+                "15118", "sdp", "test", "cli"
+            );
+
             var discovery = await cli.Vehicle.DiscoverAsync(
-                                      Arguments.Length == 2 ? Arguments[1] : null,
+                                      wanted,
                                       CancellationToken
                                   );
 

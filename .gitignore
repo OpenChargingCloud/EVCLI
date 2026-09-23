@@ -276,6 +276,15 @@ __pycache__/
 # than none.
 /certificates/
 
+# What this vehicle wrote down about its own runs. One file per day, and a
+# record of what this machine did rather than of what the source says - the
+# same reason as the two directories above, and the same anchor.
+#
+# "*.log" further up already covers the files; this covers the directory, so
+# that the build stamp does not start calling every tree dirty the first time
+# somebody puts something else in there.
+/logs/
+
 # What a running charging station is configured as: its name servers, its time
 # server and its EVSEs. A property of this particular installation, not of the
 # source.
