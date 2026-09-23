@@ -139,10 +139,28 @@ a station at [fe80::223:5ff:fe42:201%5]:15118 (TLS), after 1 request(s) in 42 ms
 ```
 
 `help` lists what can be typed, `quit` leaves, **Tab** completes and **↑**
-walks back through what was typed before. `discover` is the first command, and
-it is the same discovery the **ISO 15118** page runs and the same one `--sdp`
-runs once at a start — three ways of asking, one implementation, so they cannot
-disagree about what happened.
+walks back through what was typed before. `discover` is the same discovery the
+**ISO 15118** page runs and the same one `--sdp` runs once at a start — three
+ways of asking, one implementation, so they cannot disagree about what
+happened.
+
+`syncNTS` is **Sync now** from the **NTS client** page in the same way: the
+same time servers asked, the same entries in the log, and afterwards the same
+result on the page as its last synchronisation. The one line that differs is
+the one saying who asked — the page names the account that pressed the button
+and tags it `web`, the prompt says it was the command line and tags it `cli`.
+Like the button, it asks and reports and leaves the clock alone. The console
+gets a line for each server as well, because the log only records what the
+group concluded:
+
+```
+EV> syncNTS
+succeeded after 673 ms: 4 of 4 server(s) answered (2 required), offset +702.4 ms, spread 0.5 ms
+  ptbtime1.ptb.de  +702.4 ms, round trip 38.1 ms, key exchange new
+  ptbtime2.ptb.de  +702.7 ms, round trip 38.0 ms, key exchange new
+  ptbtime3.ptb.de  +702.4 ms, round trip 38.0 ms, key exchange new
+  ptbtime4.ptb.de  +702.2 ms, round trip 39.3 ms, key exchange new
+```
 
 Tab is the reason the prompt is worth having. `discover` takes an interface,
 and an interface is called `enp0s5` on the vehicle's Debian and
