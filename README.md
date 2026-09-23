@@ -94,6 +94,15 @@ Hermod's HTTPExt API, mounted under `/ext`. The web interface is
 on <http://127.0.0.1:2347/>; `--any` binds every address instead of the
 loopback, and `--help` lists the rest.
 
+Everything that happens is written three times over, because the three answer
+different questions. The **console** shows what is going on to whoever is
+watching, at the level `--verbose` and `--quiet` choose. The **Logs** page
+keeps the last two thousand entries for whoever asks, and loses them when the
+process ends. And `logs/` beside the solution keeps one file per day, every
+entry down to the debug ones, for the afternoon somebody asks what happened
+last night — `--log-file <dir>` puts it elsewhere, `--no-log-file` leaves it
+out, and nothing in it is ever deleted.
+
 To watch a whole session without a real station, point it at the reference one
 in the ISO 15118 submodule:
 
