@@ -74,7 +74,7 @@ qemu-system-x86_64 \
 2. Boot the virtual machine
 3. Deselect everything except `Standard Tools`, select `SSH server`
 4. `vncviewer 127.0.0.1::6000`
-5. `apt install joe mc sudo net-tools git`
+5. `apt install joe mc sudo net-tools git tcpdump screen`
 6. `joe /etc/sudoers` add: `ahzf    ALL=(ALL:ALL) NOPASSWD: ALL`, or which user you prefer :)
 7. https://learn.microsoft.com/en-us/dotnet/core/install/linux-debian?tabs=dotnet10
 8. `apt install -y curl ca-certificates unzip gnupg`
