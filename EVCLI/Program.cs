@@ -491,6 +491,11 @@ namespace cloud.charging.open.EV
             Console.WriteLine("      --no-trace    do not pick up what the libraries below write with DebugX");
             Console.WriteLine();
             Console.WriteLine("Whatever the console shows, the web interface shows the whole log under 'Logs'.");
+            Console.WriteLine();
+            Console.WriteLine("Once it is up, the console is a prompt: 'help' lists what can be typed there,");
+            Console.WriteLine("Tab completes it, and 'quit' or Ctrl+C stops the vehicle. Started where there is");
+            Console.WriteLine("no terminal on the input - from a script, under a service manager, in CI - there");
+            Console.WriteLine("is no prompt and it simply runs.");
         }
 
         #endregion

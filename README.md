@@ -3,7 +3,8 @@
 [![CI](https://github.com/OpenChargingCloud/EVCLI/actions/workflows/ci.yml/badge.svg)](https://github.com/OpenChargingCloud/EVCLI/actions/workflows/ci.yml)
 [![Nightly](https://github.com/OpenChargingCloud/EVCLI/actions/workflows/nightly.yml/badge.svg)](https://github.com/OpenChargingCloud/EVCLI/actions/workflows/nightly.yml)
 
-One simulated electric vehicle, with a web interface, until Ctrl+C.
+One simulated electric vehicle, with a web interface and a prompt, until
+Ctrl+C.
 
 It is the counterpart of
 [ChargingStationCLI](https://github.com/OpenChargingCloud/ChargingStation) and
@@ -21,7 +22,8 @@ TLS, EIM or Plug & Charge.
 Every request that goes out and every answer that comes in appears in the log
 while it happens, so the **Logs** page shows the exchange itself rather than
 only its outcome. `--sdp`, `--slac`, `--t1s` and `--charge` do the same things
-once at a start, from the console.
+once at a start, from the console, and `discover` does it again whenever you
+type it at the vehicle's prompt.
 
 A vehicle is not a station turned around. A station runs a loop: it listens,
 and answers whoever plugs in. A vehicle's flow has a beginning and an end —
@@ -117,6 +119,38 @@ between two machines sharing one Ethernet segment.
 a Linux host, a bridge for management and a second, IPv6-only bridge standing
 in for the charging cable.
 
+### Typing at it
+
+Once it is up, the console is a prompt named after the vehicle rather than a
+place that only scrolls:
+
+```
+EV> discover
+a station at [fe80::223:5ff:fe42:201%5]:15118 (TLS), after 1 request(s) in 42 ms
+```
+
+`help` lists what can be typed, `quit` leaves, **Tab** completes and **↑**
+walks back through what was typed before. `discover` is the first command, and
+it is the same discovery the **ISO 15118** page runs and the same one `--sdp`
+runs once at a start — three ways of asking, one implementation, so they cannot
+disagree about what happened.
+
+Tab is the reason the prompt is worth having. `discover` takes an interface,
+and an interface is called `enp0s5` on the vehicle's Debian and
+`vEthernet (Default Switch)` on a Windows desk; nobody types either of those
+from memory twice. The vehicle already knows which of its interfaces could
+carry V2G traffic, so Tab offers exactly those — quoted where a name has a
+space in it.
+
+The log keeps writing while you type, from whichever thread did the thing it is
+reporting, and your half-typed line survives it: the line is taken off the
+screen, the entry is written whole, and the line comes back with the cursor
+where it was. Nothing is suppressed and nothing is held back to make that work.
+
+Where there is no terminal on the input — from a script, under a service
+manager, in CI — there is no prompt and nothing to type at, and the vehicle
+runs until it is stopped exactly as it did before.
+
 ### Certificates
 
 Everything this vehicle believes and everything it presents lives in one store,
@@ -195,6 +229,7 @@ without rebuilding the C# side.
 | | |
 |---|---|
 | `EVCLI/` | the command line: switches, and what the console says at a start |
+| `EVCLI/CLI/` | what can be typed at the running vehicle - one file per command |
 | `libs/EV/EV/` | the vehicle itself - its configuration, its log, its JSON API, its web interface |
 | `libs/EV/EV/Frontend/` | the web interface: TypeScript and SCSS, bundled by webpack |
 | `libs/EV/EV/Certificates/` | the certificate store: what is in it, and what may go in |
@@ -203,8 +238,9 @@ without rebuilding the C# side.
 | `LinuxTestEnvironment.md` | two virtual machines and two bridges, for a session over a wire rather than over loopback |
 | `.github/workflows/` | what runs on every push, and what runs at night |
 
-The command line is this program's vocabulary and nothing else. What a vehicle
-*is*, and what it does, lives in `libs/EV`.
+The command line is this program's vocabulary and nothing else - the switches
+it is started with and the commands it can be typed at. What a vehicle *is*,
+and what it does, lives in `libs/EV`.
 
 
 ### Your participation
