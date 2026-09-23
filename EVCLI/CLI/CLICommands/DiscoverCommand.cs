@@ -140,11 +140,14 @@ namespace cloud.charging.open.EV.CommandLine
             // Said before the discovery rather than after it, and said at all
             // because the log is a log book: the SDP entries below record what
             // went out on the wire, and nothing in them says who asked for it.
-            // The web interface writes the same line naming the user who
-            // pressed the button; here it is whoever is at the console.
+            //
+            // The line the web interface writes when 'Look for a station' is
+            // pressed, with the same tags and "cli" where it says "web". There
+            // it names the account that pressed the button; here it is whoever
+            // is at the console, which the vehicle cannot tell apart.
             cli.Vehicle.Log.Info(
-                $"A discovery was asked for at the command line, " +
-                $"{(wanted is null ? "on this vehicle's configured interface" : $"on '{wanted}'")}.",
+                $"Somebody at the command line asked this vehicle to look for a station " +
+                $"{(wanted is null ? "on its configured interface" : $"on '{wanted}'")}.",
                 "15118", "sdp", "test", "cli"
             );
 
