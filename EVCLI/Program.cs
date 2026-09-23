@@ -383,7 +383,9 @@ namespace cloud.charging.open.EV
             Console.WriteLine("                    the interface the station is on, i.e. the powerline modem;");
             Console.WriteLine("                    without one the first candidate with an IPv6 link-local");
             Console.WriteLine("                    address is taken, and the console says which");
-            Console.WriteLine("  --no-tls          ask stations for a plain TCP endpoint rather than a TLS one");
+            Console.WriteLine("  --no-tls          ask stations for a plain TCP endpoint rather than a TLS one,");
+            Console.WriteLine("                    and accept the plain one they then offer - both, because");
+            Console.WriteLine("                    asking for one and refusing it is only a slower timeout");
             Console.WriteLine();
             Console.WriteLine("The session:");
             Console.WriteLine("  --connect <host:port>");
@@ -1114,9 +1116,25 @@ namespace cloud.charging.open.EV
                 if (interfaceName is not null || noTLS)
                 {
 
+                    // --no-tls moves the acceptance policy with the request, or
+                    // it could never succeed: the client refuses a no-TLS
+                    // answer whenever RejectNoTLSResponses is on, without
+                    // looking at what was asked for. A vehicle that asked for
+                    // plain TCP and then threw away the plain TCP it was
+                    // offered would be a switch that does nothing but time out.
+                    //
+                    // The station has always done this on its side - its
+                    // BuildSdpOptions sets RejectNoTlsRequests = !noTls for the
+                    // same reason - so this is the missing half of a pair
+                    // rather than a new idea.
+                    //
+                    // Only on the way down. Nothing here turns the rejection
+                    // back on, because a vehicle that has been told to accept
+                    // TLS again is a vehicle whose configuration says so.
                     var told = new V2GConfiguration(
-                                   InterfaceName:      interfaceName,
-                                   RequestedSecurity:  noTLS ? SDP_Security.NoTLS : null
+                                   InterfaceName:         interfaceName,
+                                   RequestedSecurity:     noTLS ? SDP_Security.NoTLS : null,
+                                   RejectNoTLSResponses:  noTLS ? false            : null
                                ).ToJSON();
 
                     if (!vehicle.TryUpdateV2GConfiguration(told, out var problem))
