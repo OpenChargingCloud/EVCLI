@@ -71,13 +71,28 @@ namespace cloud.charging.open.EV.CommandLine
         public override IEnumerable<SuggestionResponse> Suggest(String[] Arguments)
         {
 
-            #region The command itself
+            #region The command itself - and, once it is whole, the interfaces
 
             if (Arguments.Length == 1)
             {
 
-                if (CommandName.Equals    (Arguments[0], StringComparison.CurrentCultureIgnoreCase))
-                    return [ SuggestionResponse.CommandCompleted(CommandName) ];
+                // The interfaces as soon as the command is whole, and not only
+                // once something of one has been typed. The command line keeps
+                // no empty word at its end, so "discover " arrives here as
+                // "discover" alone, and a Tab that answered with the command it
+                // already was never showed the list it is there for.
+                if (CommandName.Equals(Arguments[0], StringComparison.CurrentCultureIgnoreCase))
+                {
+
+                    var all = V2GLink.Candidates().
+                                  Select(candidate => SuggestionResponse.ParameterPrefix($"{CommandName} {Quoted(candidate.Name)}")).
+                                  ToArray();
+
+                    return all.Length > 0
+                               ? all
+                               : [ SuggestionResponse.CommandCompleted(CommandName) ];
+
+                }
 
                 if (CommandName.StartsWith(Arguments[0], StringComparison.CurrentCultureIgnoreCase))
                     return [ SuggestionResponse.CommandCompleted(CommandName) ];
@@ -90,24 +105,32 @@ namespace cloud.charging.open.EV.CommandLine
 
             #region ... and the interface to broadcast on
 
+            // A name with a space in it is typed in quotes, and until its closing
+            // quote is there the command line splits it at the spaces: what Tab
+            // itself fills in for "vEthernet (Default Switch)" and
+            // "vEthernet (WSL)" is `discover "vEthernet (`, which arrives as
+            // three words. Put back together it is the beginning of one name,
+            // without the quote that opened it.
+            if (Arguments.Length > 2 && Arguments[1].StartsWith('"'))
+                Arguments = [ Arguments[0], String.Join(" ", Arguments[1..]) ];
+
             if (Arguments.Length == 2 &&
                 CommandName.Equals(Arguments[0], StringComparison.CurrentCultureIgnoreCase))
             {
 
-                var list = new List<SuggestionResponse>();
+                var typed = Arguments[1].TrimStart('"');
+                var list  = new List<SuggestionResponse>();
 
                 foreach (var candidate in V2GLink.Candidates())
                 {
 
-                    if (!candidate.Name.StartsWith(Arguments[1], StringComparison.CurrentCultureIgnoreCase))
+                    if (!candidate.Name.StartsWith(typed, StringComparison.CurrentCultureIgnoreCase))
                         continue;
 
-                    var name = candidate.Name.Contains(' ')
-                                   ? $"\"{candidate.Name}\""
-                                   : candidate.Name;
+                    var name = Quoted(candidate.Name);
 
                     list.Add(
-                        candidate.Name.Equals(Arguments[1], StringComparison.CurrentCultureIgnoreCase)
+                        candidate.Name.Equals(typed, StringComparison.CurrentCultureIgnoreCase)
                             ? SuggestionResponse.ParameterCompleted($"{CommandName} {name}")
                             : SuggestionResponse.ParameterPrefix   ($"{CommandName} {name}")
                     );
@@ -169,6 +192,22 @@ namespace cloud.charging.open.EV.CommandLine
         public override String Help()
 
             => $"{CommandName} [<interface>] - look for a charging station; without an interface, the configured one";
+
+        #endregion
+
+
+        #region (private static) Quoted(Name)
+
+        /// <summary>
+        /// An interface name as it has to be typed: in quotes when it has a
+        /// space in it, because the command line is split on whitespace unless
+        /// quotes say otherwise.
+        /// </summary>
+        private static String Quoted(String Name)
+
+            => Name.Contains(' ')
+                   ? $"\"{Name}\""
+                   : Name;
 
         #endregion
 
