@@ -224,12 +224,16 @@ jobs:
       # of that belongs in a workspace whose cleanliness the build stamps into
       # every assembly it produces.
       #
-      # Two questions are asked of it, and the second is not an afterthought.
+      # Three questions are asked of it, and the second is not an afterthought.
       # "/" must come back as the embedded web interface, which is what proves
       # the bundle is inside the assembly. "/api/v1/status" must come back 401,
       # because the JSON API of a vehicle is nobody's business until somebody
       # has signed in — a 200 there would mean the door had come off, and that
       # is a failure no unit test in this repository would notice.
+      # "/api/v1/clock" must come back 401 as well, and for one more reason:
+      # an unknown path under /api answers 404, so a 401 is also what proves
+      # the route is there at all. Its JSON was written long before it was
+      # served, and nothing noticed that it was not.
       - name: The vehicle starts and answers (Debian)
         if: matrix.leg == 'debian-13-container'
         timeout-minutes: 5
@@ -276,11 +280,15 @@ jobs:
           api="$(curl -sS -o /dev/null -w '%{http_code}' http://127.0.0.1:18123/api/v1/status 2>/dev/null || true)"
           api="${api:-000}"
 
+          clock="$(curl -sS -o /dev/null -w '%{http_code}' http://127.0.0.1:18123/api/v1/clock 2>/dev/null || true)"
+          clock="${clock:-000}"
+
           kill "$pid" 2>/dev/null || true
           wait "$pid" 2>/dev/null || true
 
           echo "GET /                -> $root"
           echo "GET /api/v1/status   -> $api"
+          echo "GET /api/v1/clock    -> $clock"
 
           # What the banner says this was built from - in every run, not only a
           # red one, because a stamp that reads "unknown" or "-dirty" is worth
@@ -297,6 +305,10 @@ jobs:
           fi
           if [ "$api" != 401 ]; then
               echo "The JSON API answered $api where 401 was expected: it is supposed to be shut to anyone not signed in."
+              fault=1
+          fi
+          if [ "$clock" != 401 ]; then
+              echo "The clock answered $clock where 401 was expected: a 404 means the route has gone missing, a 200 that it is open to anyone."
               fault=1
           fi
 

@@ -188,11 +188,15 @@ jobs:
           api="$(curl -sS -o /dev/null -w '%{http_code}' http://127.0.0.1:18123/api/v1/status 2>/dev/null || true)"
           api="${api:-000}"
 
+          clock="$(curl -sS -o /dev/null -w '%{http_code}' http://127.0.0.1:18123/api/v1/clock 2>/dev/null || true)"
+          clock="${clock:-000}"
+
           kill "$pid" 2>/dev/null || true
           wait "$pid" 2>/dev/null || true
 
           echo "GET /                -> $root"
           echo "GET /api/v1/status   -> $api"
+          echo "GET /api/v1/clock    -> $clock"
 
           # What the banner says this was built from - in every run, not only a
           # red one, because a stamp that reads "unknown" or "-dirty" is worth
@@ -209,6 +213,10 @@ jobs:
           fi
           if [ "$api" != 401 ]; then
               echo "The JSON API answered $api where 401 was expected: it is supposed to be shut to anyone not signed in."
+              fault=1
+          fi
+          if [ "$clock" != 401 ]; then
+              echo "The clock answered $clock where 401 was expected: a 404 means the route has gone missing, a 200 that it is open to anyone."
               fault=1
           fi
 
