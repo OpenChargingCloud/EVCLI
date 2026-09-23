@@ -503,8 +503,8 @@ namespace cloud.charging.open.EV
             Console.WriteLine();
             Console.WriteLine("Once it is up, the console is a prompt: 'help' lists what can be typed there,");
             Console.WriteLine("Tab completes it, and 'quit' or Ctrl+C stops the vehicle. Started where there is");
-            Console.WriteLine("no terminal on the input - from a script, under a service manager, in CI - there");
-            Console.WriteLine("is no prompt and it simply runs.");
+            Console.WriteLine("no terminal - from a script, under a service manager, in CI, or with the output");
+            Console.WriteLine("going into a file - there is no prompt and it simply runs.");
         }
 
         #endregion
@@ -1442,11 +1442,20 @@ namespace cloud.charging.open.EV
                 // and there would be nobody to type anyway. Then the vehicle
                 // simply runs, exactly as it did before there was a command
                 // line, and the web interface is how it is spoken to.
-                var canBeTypedAt = !Console.IsInputRedirected;
+                //
+                // The output counts too: the prompt is drawn by moving the
+                // cursor, and with the output going into "| tee" or a file
+                // there is no cursor to move. Measured on Windows while this
+                // asked about the input alone: the prompt threw while drawing
+                // itself, before a key was pressed, and the vehicle was gone
+                // within 200 ms of its banner - with exit code 0, a program
+                // that said all was well.
+                var canBeTypedAt = !Console.IsInputRedirected &&
+                                   !Console.IsOutputRedirected;
 
                 Console.WriteLine(canBeTypedAt
                                       ? "Type 'help' for what can be typed here, 'quit' or Ctrl+C to stop."
-                                      : "Press Ctrl+C to stop. (No terminal on the input here, so nothing to type at.)");
+                                      : "Press Ctrl+C to stop. (No terminal here, so nothing to type at.)");
                 Console.WriteLine();
 
                 var stopped = new TaskCompletionSource();
@@ -1464,22 +1473,85 @@ namespace cloud.charging.open.EV
                 if (canBeTypedAt)
                 {
 
-                    // From here two things write on one screen: this command
-                    // line, and the vehicle's log from whichever thread did the
-                    // thing it is reporting. So the log stops writing of its own
-                    // accord and asks the command line for the screen instead -
-                    // which takes the half-typed command off it, writes the
-                    // entry whole, and puts the command back with the cursor
-                    // where it was.
-                    var cli = new VehicleCLI(vehicle);
+                    var cli             = new VehicleCLI(vehicle);
+                    var brokeAtOnce     = false;
 
-                    vehicle.ShareConsoleWith(cli.WriteBlock);
+                    while (true)
+                    {
 
-                    // On a thread of its own, because Console.ReadKey blocks the
-                    // one it is called on: awaited directly, the command line
-                    // would keep this thread inside ReadKey and Ctrl+C would
-                    // have nobody left to wake.
-                    await Task.WhenAny(stopped.Task, Task.Run(cli.Run));
+                        // From here two things write on one screen: this command
+                        // line, and the vehicle's log from whichever thread did
+                        // the thing it is reporting. So the log stops writing of
+                        // its own accord and asks the command line for the screen
+                        // instead - which takes the half-typed command off it,
+                        // writes the entry whole, and puts the command back with
+                        // the cursor where it was.
+                        vehicle.ShareConsoleWith(cli.WriteBlock);
+
+                        // On a thread of its own, because Console.ReadKey blocks
+                        // the one it is called on: awaited directly, the command
+                        // line would keep this thread inside ReadKey and Ctrl+C
+                        // would have nobody left to wake.
+                        var since   = System.Diagnostics.Stopwatch.GetTimestamp();
+                        var typing  = Task.Run(cli.Run);
+
+                        await Task.WhenAny(stopped.Task, typing);
+
+                        if (!typing.IsFaulted)
+                            break;
+
+                        // A command line that broke is not somebody asking for
+                        // the vehicle to stop - and that is how it was taken
+                        // before this loop. One thing that breaks it is a line
+                        // typed wider than the window, which throws out of the
+                        // line editor in Styx - measured in 80 columns:
+                        // "Parameter 'left', actual value was 80" - and the
+                        // vehicle shut down on it, with exit code 0.
+                        //
+                        // The console goes back to the log first, with a lock
+                        // of its own, because the command line's way of writing
+                        // may be what broke: a prompt that fails while drawing
+                        // itself stays registered as the line on the screen,
+                        // and every entry after that fails trying to take it
+                        // off again.
+                        //
+                        // Then a new prompt - unless the last one was already
+                        // a new one and broke again the moment it started.
+                        // That is a console a prompt cannot be drawn on at all,
+                        // and asking a third time would only fail a third time.
+                        // How fast the first one broke says nothing: a line
+                        // pasted in straight after the start is still a line.
+                        var padlock = new Lock();
+
+                        vehicle.ShareConsoleWith(write => { lock (padlock) { write(); } });
+
+                        var atOnce = System.Diagnostics.Stopwatch.GetElapsedTime(since) < TimeSpan.FromSeconds(1);
+                        var giveUp = atOnce && brokeAtOnce;
+
+                        brokeAtOnce = atOnce;
+
+                        // On one line, as every entry is: the message of an
+                        // exception may carry line breaks of its own - this
+                        // one does, before "Actual value was 80" - and in the
+                        // log file a second line has no time, no level and no
+                        // tags.
+                        var why = typing.Exception?.GetBaseException().Message.ReplaceLineEndings(" ");
+
+                        vehicle.Log.Warning(
+                            $"The command line stopped working: {why} " +
+                            (giveUp
+                                 ? "A new one broke again as soon as it started, so there is none; the vehicle keeps running, and Ctrl+C stops it."
+                                 : "A new one is started."),
+                            "cli"
+                        );
+
+                        if (giveUp)
+                        {
+                            await stopped.Task;
+                            break;
+                        }
+
+                    }
 
                 }
 

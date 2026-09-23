@@ -174,9 +174,10 @@ reporting, and your half-typed line survives it: the line is taken off the
 screen, the entry is written whole, and the line comes back with the cursor
 where it was. Nothing is suppressed and nothing is held back to make that work.
 
-Where there is no terminal on the input — from a script, under a service
-manager, in CI — there is no prompt and nothing to type at, and the vehicle
-runs until it is stopped exactly as it did before.
+Where there is no terminal — from a script, under a service manager, in CI, or
+with the output going into a file or through `| tee` — there is no prompt and
+nothing to type at, and the vehicle runs until it is stopped exactly as it did
+before.
 
 ### Certificates
 
