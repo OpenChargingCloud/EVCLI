@@ -162,12 +162,37 @@ succeeded after 673 ms: 4 of 4 server(s) answered (2 required), offset +702.4 ms
   ptbtime4.ptb.de  +702.2 ms, round trip 39.3 ms, key exchange new
 ```
 
+With one of the vehicle's time servers after it, it is that server's **Test**
+button instead: one server, on the ports it is configured with, and every step
+of the key exchange and the time request with when it happened. Only a server
+of this vehicle is tested; anything else is answered with the ones there are,
+and nothing is asked.
+
+```
+EV> syncNTS ptbtime2.ptb.de
+ptbtime2.ptb.de answered, 603 ms altogether:
+    +2 ms  Asking ptbtime2.ptb.de.: key exchange on port 4460, time on port 123, 10 second(s) allowed.
+   +60 ms  'ptbtime2.ptb.de.' resolves to 192.53.103.104, 2001:0638:0610:be01:0000:0000:0000:0104.
+   +60 ms  Key exchange over TLS ...
+  +539 ms  Connected to 2001:0638:0610:be01:0000:0000:0000:0104, of 2 address(es) that were offered.
+  +539 ms  Where the time went: name 14 ms, TCP 26 ms, TLS 338 ms, key exchange 68 ms.
+  +540 ms  The key exchange succeeded: AES_SIV_CMAC_256, 8 cookie(s).
+  +540 ms  It named no NTP server of its own, so the time is asked of this host.
+  +540 ms  Authenticated NTP request ...
+  +602 ms  Answered by [2001:638:610:be01::104]:123; 8 cookie(s) left, and a fresh one came back.
+  +603 ms  Round trip 27.2 ms.
+  +603 ms  This vehicle's clock is +728.0 ms off what ptbtime2.ptb.de. says.
+  +603 ms  The clock was not stepped: that is a different thing, with meter readings and certificates hanging off it, and not something a test does by surprise.
+```
+
 Tab is the reason the prompt is worth having. `discover` takes an interface,
 and an interface is called `enp0s5` on the vehicle's Debian and
 `vEthernet (Default Switch)` on a Windows desk; nobody types either of those
 from memory twice. The vehicle already knows which of its interfaces could
 carry V2G traffic, so Tab offers exactly those — quoted where a name has a
-space in it.
+space in it. `syncNTS` takes a time server, and Tab offers the vehicle's own.
+Either list comes as soon as the command is typed, and each Tab after that
+completes as far as the names agree.
 
 The log keeps writing while you type, from whichever thread did the thing it is
 reporting, and your half-typed line survives it: the line is taken off the
