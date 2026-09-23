@@ -103,6 +103,11 @@ entry down to the debug ones, for the afternoon somebody asks what happened
 last night — `--log-file <dir>` puts it elsewhere, `--no-log-file` leaves it
 out, and nothing in it is ever deleted.
 
+The days are UTC days, as the timestamps in the files are. A file that cannot
+be written is said once on the console rather than once per entry, every entry
+after that is tried again, and the first one that makes it is preceded by a
+line saying how many are missing.
+
 To watch a whole session without a real station, point it at the reference one
 in the ISO 15118 submodule:
 
