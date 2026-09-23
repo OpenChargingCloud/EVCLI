@@ -1502,11 +1502,13 @@ namespace cloud.charging.open.EV
 
                         // A command line that broke is not somebody asking for
                         // the vehicle to stop - and that is how it was taken
-                        // before this loop. One thing that breaks it is a line
-                        // typed wider than the window, which throws out of the
-                        // line editor in Styx - measured in 80 columns:
+                        // before this loop. What broke it first was a line
+                        // typed wider than the window: until Styx learned to
+                        // show such a line through a window onto it, it threw
+                        // out of the line editor - measured in 80 columns,
                         // "Parameter 'left', actual value was 80" - and the
-                        // vehicle shut down on it, with exit code 0.
+                        // vehicle shut down on it, with exit code 0. That cause
+                        // is gone; this is for the next one.
                         //
                         // The console goes back to the log first, with a lock
                         // of its own, because the command line's way of writing
