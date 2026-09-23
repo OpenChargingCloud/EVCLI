@@ -21,6 +21,7 @@ using System.Globalization;
 
 using Newtonsoft.Json.Linq;
 
+using cloud.charging.open.EV.CommandLine;
 using org.GraphDefined.Vanaheimr.Hermod;
 using org.GraphDefined.Vanaheimr.Hermod.HTTP;
 
@@ -1380,19 +1381,57 @@ namespace cloud.charging.open.EV
 
                 #endregion
 
-                Console.WriteLine("Press Ctrl+C to stop.");
-                Console.WriteLine();
+                #region The command line, until 'quit' or Ctrl+C
 
-                #region Wait for Ctrl+C
+                // Whether anybody can type here at all. Started from a script,
+                // from a service manager or in CI, this process has no terminal
+                // on its input and Console.ReadKey throws rather than waiting -
+                // and there would be nobody to type anyway. Then the vehicle
+                // simply runs, exactly as it did before there was a command
+                // line, and the web interface is how it is spoken to.
+                var canBeTypedAt = !Console.IsInputRedirected;
+
+                Console.WriteLine(canBeTypedAt
+                                      ? "Type 'help' for what can be typed here, 'quit' or Ctrl+C to stop."
+                                      : "Press Ctrl+C to stop. (No terminal on the input here, so nothing to type at.)");
+                Console.WriteLine();
 
                 var stopped = new TaskCompletionSource();
 
+                // Ctrl+C still means stop, as it always has here. The command
+                // line adds a handler of its own for it, which cancels whatever
+                // command is running; both fire, and that is the intended
+                // reading of Ctrl+C - abandon what is running and shut the
+                // vehicle down. 'quit' is the same thing said politely.
                 Console.CancelKeyPress += (_, e) => {
                     e.Cancel = true;
                     stopped.TrySetResult();
                 };
 
-                await stopped.Task;
+                if (canBeTypedAt)
+                {
+
+                    // From here two things write on one screen: this command
+                    // line, and the vehicle's log from whichever thread did the
+                    // thing it is reporting. So the log stops writing of its own
+                    // accord and asks the command line for the screen instead -
+                    // which takes the half-typed command off it, writes the
+                    // entry whole, and puts the command back with the cursor
+                    // where it was.
+                    var cli = new VehicleCLI(vehicle);
+
+                    vehicle.ShareConsoleWith(cli.WriteBlock);
+
+                    // On a thread of its own, because Console.ReadKey blocks the
+                    // one it is called on: awaited directly, the command line
+                    // would keep this thread inside ReadKey and Ctrl+C would
+                    // have nobody left to wake.
+                    await Task.WhenAny(stopped.Task, Task.Run(cli.Run));
+
+                }
+
+                else
+                    await stopped.Task;
 
                 #endregion
 
@@ -1409,7 +1448,7 @@ namespace cloud.charging.open.EV
         /// How a discovery went, in one line for the console. The whole of it
         /// is in the log either way.
         /// </summary>
-        private static String DiscoveryOutcome(JObject Discovery)
+        internal static String DiscoveryOutcome(JObject Discovery)
         {
 
             var outcome = Discovery.Value<String>("outcome");
