@@ -173,21 +173,38 @@ of the key exchange and the time request with when it happened. Only a server
 of this vehicle is tested; anything else is answered with the ones there are,
 and nothing is asked.
 
+The key exchange is TLS, and the test says what its certificate claims and
+whether that held up: the session, then every certificate of the chain as this
+machine built it - the server's, the intermediates', the root's - each with
+both ends of its validity and the days it has left, the root's SHA-256
+fingerprint, and the verdict with its reasons. The root is there as much as the
+server's certificate because a root can be pinned, and a pinned root that runs
+out stops everything relying on it; which root the chain ends at depends on the
+machine's trust store. A certificate that is refused is described just the
+same, before the exchange is said to have failed.
+
 ```
 EV> syncNTS ptbtime2.ptb.de
-ptbtime2.ptb.de answered, 549 ms altogether:
-    +1 ms  Asking ptbtime2.ptb.de: key exchange on port 4460, time on port 123, 10 second(s) allowed.
-   +62 ms  'ptbtime2.ptb.de' resolves to 192.53.103.104, 2001:0638:0610:be01:0000:0000:0000:0104.
-   +62 ms  Key exchange over TLS ...
-  +490 ms  Connected to 2001:0638:0610:be01:0000:0000:0000:0104, of 2 address(es) that were offered.
-  +490 ms  Where the time went: name 16 ms, TCP 23 ms, TLS 320 ms, key exchange 38 ms.
-  +491 ms  The key exchange succeeded: AES_SIV_CMAC_256, 8 cookie(s).
-  +491 ms  It named no NTP server of its own, so the time is asked of this host.
-  +491 ms  Authenticated NTP request ...
-  +548 ms  Answered by [2001:638:610:be01::104]:123; 8 cookie(s) left, and a fresh one came back.
-  +548 ms  Round trip 27.3 ms.
-  +549 ms  This vehicle's clock is +731.8 ms off what ptbtime2.ptb.de says.
-  +549 ms  The clock was not stepped: that is a different thing, with meter readings and certificates hanging off it, and not something a test does by surprise.
+ptbtime2.ptb.de answered, 578 ms altogether:
+    +2 ms  Asking ptbtime2.ptb.de: key exchange on port 4460, time on port 123, 10 second(s) allowed.
+   +63 ms  'ptbtime2.ptb.de' resolves to 192.53.103.104, 2001:0638:0610:be01:0000:0000:0000:0104.
+   +63 ms  Key exchange over TLS ...
+  +518 ms  Connected to 2001:0638:0610:be01:0000:0000:0000:0104, of 2 address(es) that were offered.
+  +518 ms  Where the time went: name 15 ms, TCP 28 ms, TLS 339 ms, key exchange 43 ms.
+  +520 ms  TLS 1.3, TLS_AES_128_GCM_SHA256, ALPN ntske/1.
+  +523 ms  Server certificate: CN=ptbtime2.ptb.de, for ptbtime2.ptb.de; RSA 3072-bit, sha256RSA; valid 2026-08-09 03:05:52 to 2026-11-07 03:05:51 UTC, 44 day(s) left.
+  +523 ms  Intermediate CA: CN=YR1, O=Let's Encrypt, C=US; RSA 2048-bit, sha256RSA; valid 2025-09-03 00:00:00 to 2028-09-02 23:59:59 UTC, 710 day(s) left.
+  +523 ms  Intermediate CA: CN=Root YR, O=ISRG, C=US; RSA 4096-bit, sha256RSA; valid 2026-05-13 00:00:00 to 2032-09-02 23:59:59 UTC, 2171 day(s) left.
+  +524 ms  Root CA: CN=ISRG Root X1, O=Internet Security Research Group, C=US; RSA 4096-bit, sha256RSA; valid 2015-06-04 11:04:38 to 2035-06-04 11:04:38 UTC, 3175 day(s) left.
+  +524 ms  The root's SHA-256 fingerprint: 96bcec06264976f37460779acf28c5a7cfe8a3c0aae11a8ffcee05c0bddf08c6.
+  +524 ms  Validated: the chain ends at a root this machine trusts, nothing in it is revoked (asked online), and 'ptbtime2.ptb.de' is one of the server certificate's names.
+  +525 ms  The key exchange succeeded: AES_SIV_CMAC_256, 8 cookie(s).
+  +525 ms  It named no NTP server of its own, so the time is asked of this host.
+  +525 ms  Authenticated NTP request ...
+  +577 ms  Answered by [2001:638:610:be01::104]:123; 8 cookie(s) left, and a fresh one came back.
+  +578 ms  Round trip 23.3 ms.
+  +578 ms  This vehicle's clock is +807.9 ms off what ptbtime2.ptb.de says.
+  +578 ms  The clock was not stepped: that is a different thing, with meter readings and certificates hanging off it, and not something a test does by surprise.
 ```
 
 Tab is the reason the prompt is worth having. `discover` takes an interface,
