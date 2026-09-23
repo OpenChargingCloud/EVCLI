@@ -168,10 +168,11 @@ namespace cloud.charging.open.EV.CommandLine
                     return [ $"'{Arguments[1]}' is none of this vehicle's time servers, which are {String.Join(", ", TimeServers())}." ];
 
                 // The name as the page sends it for the Test button of that
-                // row - fully qualified - so that the line the log gets is the
-                // page's line, with the command line where the page names the
-                // account and "cli" where it says "web".
-                var host = server.Hostname.ToString();
+                // row - as it is read, without the root's dot - so that the
+                // line the log gets is the page's line, with the command line
+                // where the page names the account and "cli" where it says
+                // "web".
+                var host = server.Hostname.Trimmed;
 
                 cli.Vehicle.Log.Info(
                     $"Somebody at the command line asked this vehicle to test the time server '{host}'.",
