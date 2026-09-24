@@ -16,3 +16,6 @@
 [submodule "libs/EV"]
 	path = libs/EV
 	url = https://github.com/OpenChargingCloud/EV.git
+[submodule "libs/WWCP_Node"]
+	path = libs/WWCP_Node
+	url = https://github.com/OpenChargingCloud/WWCP_Node.git

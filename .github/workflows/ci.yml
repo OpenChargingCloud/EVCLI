@@ -193,6 +193,13 @@ jobs:
           npm run typecheck:test
           npm test
 
+      # The node below the vehicle: the configuration file every one of these
+      # programs reads, section by section. libs/WWCP_Node has no workflow of
+      # its own either, for the same reason as libs/EV below.
+      - name: Test the node
+        timeout-minutes: 10
+        run: dotnet test libs/WWCP_Node/WWCP_Node_Tests/WWCP_Node_Tests.csproj --configuration Release --no-build --logger "console;verbosity=normal" --logger "trx;LogFileName=node-${{ matrix.leg }}.trx" --results-directory artifacts
+
       # The vehicle's own tests: the configuration it reads and writes, the
       # certificate store, the choice of V2G interface, the time-source group.
       # Nowhere else runs them — libs/EV has no workflow of its own, by design:

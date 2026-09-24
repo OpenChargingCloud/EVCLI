@@ -2,6 +2,8 @@
   <Folder Name="/Dependencies/">
     <Project Path="libs/EV/EV/EV.csproj" Id="e1841eae-4155-4d8a-8dd6-58388d9ecc22" />
     <Project Path="libs/EV/EVTests/EVTests.csproj" Id="c857cd70-a9db-466c-8bc0-211d7db97b48" />
+    <Project Path="libs/WWCP_Node/WWCP_Node/WWCP_Node.csproj" Id="c8ea6c97-e401-4da1-856c-4b4344d64aaf" />
+    <Project Path="libs/WWCP_Node/WWCP_Node_Tests/WWCP_Node_Tests.csproj" Id="2f631573-5ca9-4e3d-8dd8-279bda76c02f" />
   </Folder>
   <Folder Name="/Dependencies/ISO15118/">
     <Project Path="libs/WWCP_ISO15118/WWCP_ISO15118_2/WWCP_ISO15118_2.csproj" />

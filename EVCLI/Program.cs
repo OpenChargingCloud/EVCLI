@@ -30,11 +30,11 @@ using cloud.charging.open.protocols.ISO15118.SharedCC;
 using cloud.charging.open.protocols.ISO15118.NetworkInterfaces;
 using cloud.charging.open.protocols.ISO15118.StateMachines;
 
-using cloud.charging.open.EV.Certificates;
 using cloud.charging.open.EV.Configuration;
 using cloud.charging.open.EV.ISO15118;
-using cloud.charging.open.EV.Logging;
-using cloud.charging.open.EV.Web;
+using cloud.charging.open.protocols.WWCP.node;
+using cloud.charging.open.protocols.WWCP.node.Configuration;
+using cloud.charging.open.protocols.WWCP.node.logging;
 
 #endregion
 
@@ -364,7 +364,7 @@ namespace cloud.charging.open.EV
             Console.WriteLine();
             Console.WriteLine("Configuration:");
             Console.WriteLine($"  --config <file>   where everything this vehicle is told in writing lives");
-            Console.WriteLine($"                    (default: {EVConfigFile.DefaultFileName} below the repository root). Every");
+            Console.WriteLine($"                    (default: {WWCPConfigFile.DefaultFileName} below the repository root). Every");
             Console.WriteLine("                    setting below is written to it, so it is said once rather than at");
             Console.WriteLine("                    every start; the Configuration pages edit the same file.");
             Console.WriteLine();
@@ -1040,8 +1040,8 @@ namespace cloud.charging.open.EV
 
                               AccountsPath:     accountsPath ?? Path.Combine(RepositoryRoot(), EV.DefaultAccountsPath),
 
-                              ConfigFile:       new EVConfigFile(
-                                                    configFilePath ?? Path.Combine(RepositoryRoot(), EVConfigFile.DefaultFileName)
+                              ConfigFile:       new WWCPConfigFile(
+                                                    configFilePath ?? Path.Combine(RepositoryRoot(), WWCPConfigFile.DefaultFileName)
                                                 ),
 
                               Frontend:         frontend,

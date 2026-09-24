@@ -121,7 +121,7 @@ jobs:
         run: dotnet build EVCLI.slnx --configuration Release
 
       # Every test project in the solution, which is what makes this different
-      # from the gate: EVTests plus Styx, Hermod, Norn, Urdr and the eight ISO
+      # from the gate: EVTests and WWCP_Node_Tests plus Styx, Hermod, Norn, Urdr and the eight ISO
       # 15118 suites, all against each other at the versions pinned here.
       #
       # Three categories left out, and they are somebody else's decision rather
