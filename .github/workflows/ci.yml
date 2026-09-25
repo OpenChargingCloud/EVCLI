@@ -114,7 +114,7 @@ jobs:
     steps:
 
       # Before the checkout, not after it. The deepest file below this clone
-      # root sits 143 characters down, and under the classic 260-character
+      # root sits 110 characters down, and under the classic 260-character
       # limit a submodule checkout gives up halfway through with "Filename too
       # long" — the same thing the README warns about for a clone by hand.
       - name: Allow long paths (Windows)
