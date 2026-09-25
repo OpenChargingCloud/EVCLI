@@ -1329,6 +1329,7 @@ namespace cloud.charging.open.EV
                 Console.WriteLine($"  accounts       {vehicle.ExtAPI.Users.Count()} user(s) in {vehicle.AccountsPath}");
                 Console.WriteLine($"  sign in at     {vehicle.WebInterfaceURL}{EV.ExtAPIPath.ToString().Trim('/')}/login");
                 Console.WriteLine($"  configuration  {vehicle.ConfigFile.Path}");
+                Console.WriteLine($"  log files      {vehicle.LogPath ?? "none (--no-log-file)"}");
                 Console.WriteLine($"  vehicle        {vehicle.VehicleName}{(vehicle.VIN is not null ? $" ({vehicle.VIN})" : "")}");
                 Console.WriteLine($"  battery        {vehicle.StateOfCharge_percent:F0} % of {vehicle.BatteryCapacity_kWh:F0} kWh, " +
                                   $"asking for {vehicle.MaxChargingPower_kW:F1} kW up to {vehicle.TargetStateOfCharge_percent:F0} %");

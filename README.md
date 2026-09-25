@@ -101,7 +101,8 @@ keeps the last two thousand entries for whoever asks, and loses them when the
 process ends. And `logs/` beside the solution keeps one file per day, every
 entry down to the debug ones, for the afternoon somebody asks what happened
 last night — `--log-file <dir>` puts it elsewhere, `--no-log-file` leaves it
-out, and nothing in it is ever deleted.
+out, and nothing in it is ever deleted. Which directory it is, the start says
+under `log files`, and the Configuration page on its Event log card.
 
 The days are UTC days, as the timestamps in the files are. A file that cannot
 be written is said once on the console rather than once per entry, every entry

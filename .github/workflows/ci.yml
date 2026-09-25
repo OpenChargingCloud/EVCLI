@@ -194,9 +194,12 @@ jobs:
           npm test
 
       # The node below the vehicle: its log, its configuration file, DNS and
-      # NTS, the certificate store - and the node itself, constructed and never
-      # started. libs/WWCP_Node has no workflow of its own either, for the same
-      # reason as libs/EV below.
+      # NTS, the certificate store, its accounts and its ports - and the node
+      # itself, started where a test needs it listening: on a free port, and
+      # without a question to any name or time server leaving this machine.
+      # libs/WWCP_Node has a workflow of its own, which builds it against the
+      # tips of the libraries below it; this step asks the other question -
+      # whether it holds at the gitlinks pinned here.
       - name: Test the node
         timeout-minutes: 10
         run: dotnet test libs/WWCP_Node/WWCP_Node_Tests/WWCP_Node_Tests.csproj --configuration Release --no-build --logger "console;verbosity=normal" --logger "trx;LogFileName=node-${{ matrix.leg }}.trx" --results-directory artifacts
