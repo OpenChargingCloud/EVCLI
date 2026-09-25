@@ -105,6 +105,13 @@ last night — `--log-file <dir>` puts it elsewhere, `--no-log-file` leaves it
 out, and nothing in it is ever deleted. Which directory it is, the start says
 under `log files`, and the Configuration page on its Event log card.
 
+Below it, `metrological/` is the vehicle's log book: what bears on the time it
+stamps things with and on what it trusts. Every start, every synchronisation
+with what each time server answered, every change of its time servers and of
+its certificates, one line after the other, each pointing back at the one
+before and signed with a key kept beside them. A file per day, never thinned
+out. Without log files there is no log book either.
+
 The days are UTC days, as the timestamps in the files are. A file that cannot
 be written is said once on the console rather than once per entry, every entry
 after that is tried again, and the first one that makes it is preceded by a
