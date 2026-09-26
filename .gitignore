@@ -289,3 +289,9 @@ __pycache__/
 # server and its EVSEs. A property of this particular installation, not of the
 # source.
 configuration.json
+
+# What each server this vehicle connects to was last believed with: the
+# fingerprints of its certificate and its root, written beside the
+# configuration so that a change of certificate is noticed across a restart.
+# A record of what this machine saw, like the log, and not of the source.
+known-servers.json
