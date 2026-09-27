@@ -107,10 +107,11 @@ under `log files`, and the Configuration page on its Event log card.
 
 Below it, `metrological/` is the vehicle's log book: what bears on the time it
 stamps things with and on what it trusts. Every start, every synchronisation
-with what each time server answered, every change of its time servers and of
-its certificates, one line after the other, each pointing back at the one
-before and signed with a key kept beside them. A file per day, never thinned
-out. Without log files there is no log book either.
+with what each time server answered, what was news about a time server's
+certificate, every change of its time servers and of its certificates, one
+line after the other, each pointing back at the one before and signed with a
+key kept beside them. A file per day, never thinned out. Without log files
+there is no log book either.
 
 The days are UTC days, as the timestamps in the files are. A file that cannot
 be written is said once on the console rather than once per entry, every entry
@@ -237,18 +238,18 @@ before.
 
 ### Certificates
 
-Everything this vehicle believes and everything it presents lives in one store,
-`certificates/` beside the configuration file — so beside the solution unless
-`--config` says otherwise — and is managed on the **Certificates** page or from
-the command line. A certificate is put there once and then chosen by a short
-handle, so the same contract can be kept beside three others and switched
-between runs.
+Everything this vehicle believes, everything it presents and every server it
+recognises lives in one store, `certificates/` beside the configuration file —
+so beside the solution unless `--config` says otherwise — and is managed on the
+**Certificates** page or from the command line. A certificate is put there once
+and then chosen by a short handle, so the same contract can be kept beside
+three others and switched between runs.
 
 The store is the directory: one file per certificate below it, and an
-`index.json` recording the two things a file cannot say about itself, what
-somebody calls it and whether it is switched on. So a store copied to another
-machine arrives complete, and a lost index costs labels and switches rather
-than certificates.
+`index.json` recording what a file cannot say about itself: what somebody calls
+it, whether it is switched on and - for a TLS root or a server certificate -
+what it is kept for. So a store copied to another machine arrives complete,
+and a lost index costs labels, switches and usages rather than certificates.
 
 There are three kinds of root, kept apart rather than pooled, because they
 answer three different questions: a **v2gRoot** says which station may be at
@@ -257,6 +258,19 @@ worth paying with, and an **oemRoot** says which vehicle a station should issue
 a contract to. One bag of roots would let an OEM root vouch for a contract.
 Every switched-on root of a kind is believed at once; none of them is chosen
 per session.
+
+A fourth kind of root, **tlsRoot**, says which time server and which name
+server over TLS or HTTPS may be believed, beside the roots of the machine the
+vehicle runs on - and is told what it is for, `nts`, `dns` or both, because a
+root kept for the name servers alone vouches for no time. A **tlsServer** is a
+server's own certificate, kept so that the server can be held to it by its
+fingerprint. Holding a server to a certificate or a root is said on the **NTS
+client** and **DNS client** pages: a server's dialog takes the fingerprints,
+offers the one it showed last and the ones the store keeps for it, and says
+what a mismatch comes to and whether it is held to what it is first believed
+with. What every server was last believed with is kept in `known-servers.json`
+beside the configuration file - fingerprints and nothing else - so that
+another certificate is noticed where a server is held to none.
 
 The four credentials — `vehicle`, `contract`, `oemProvisioning` and
 `tariffVerification` — are chosen one per session, on the Charging page or with
@@ -270,8 +284,9 @@ dotnet run --project EVCLI -- \
 ```
 
 Importing a credential also chooses it; importing a root simply makes it
-believed. `--list-certificates` prints every handle, and `--certificates
-<dir>` points the vehicle at another store.
+believed - a TLS root or a server certificate for every use, until the
+Certificates page says what it is for. `--list-certificates` prints every
+handle, and `--certificates <dir>` points the vehicle at another store.
 
 PEM, DER and PKCS#12 all go in. A root is a certificate on its own; a
 credential has to bring its private key, so a PEM for one holds the key
@@ -316,7 +331,7 @@ without rebuilding the C# side.
 | `EVCLI/CLI/` | what can be typed at the running vehicle - one file per command |
 | `libs/EV/EV/` | the vehicle itself - its configuration, its log, its JSON API, its web interface |
 | `libs/EV/EV/Frontend/` | the web interface: TypeScript and SCSS, bundled by webpack |
-| `libs/EV/EV/Certificates/` | the certificate store: what is in it, and what may go in |
+| `libs/WWCP_Node/` | what every one of these programs shares: the configuration file, the log, name resolution and the time, the certificate store, who may sign in |
 | `libs/EV/EVTests/` | what the configuration may say, and what it may not |
 | `libs/WWCP_ISO15118/` | the protocol: SDP, SLAC, the 10BASE-T1S bus, V2GTP, the EXI codec, the session state machines |
 | `LinuxTestEnvironment.md` | two virtual machines and two bridges, for a session over a wire rather than over loopback |

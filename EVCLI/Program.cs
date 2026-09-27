@@ -439,6 +439,11 @@ namespace cloud.charging.open.EV
             Console.WriteLine("                      contract  who pays (needs the private key)");
             Console.WriteLine("                      oemProvisioning   what it was born with; the key must be P-521");
             Console.WriteLine("                      tariffVerification  what a station's signed tariff is checked with");
+            Console.WriteLine("                      tlsRoot   what a time server or a name server over TLS may chain to");
+            Console.WriteLine("                      tlsServer  a server's own certificate, to hold it to by fingerprint");
+            Console.WriteLine("                      clientRoot, tlsIdentity  kept, and used by nothing here yet");
+            Console.WriteLine("                    A tlsRoot or a tlsServer goes in for every use; the Certificates");
+            Console.WriteLine("                    page says what it is for - the time servers, the name servers.");
             Console.WriteLine("                    A root is believed as soon as it is in; every usable one of its");
             Console.WriteLine("                    kind is. A credential has one slot, so importing one also chooses");
             Console.WriteLine("                    it - name a handle below to choose a different one");
