@@ -332,7 +332,7 @@ without rebuilding the C# side.
 | `libs/EV/EV/` | the vehicle itself - its configuration, its log, its JSON API, its web interface |
 | `libs/EV/EV/Frontend/` | the web interface: TypeScript and SCSS, bundled by webpack |
 | `libs/WWCP_Node/` | what every one of these programs shares: the configuration file, the log, name resolution and the time, the certificate store, who may sign in |
-| `libs/EV/EVTests/` | what the configuration may say, and what it may not |
+| `libs/EV/EVTests/` | what the configuration may say, and what it may not - and, through WWCP_Node's conformance suite, what every node has to answer |
 | `libs/WWCP_ISO15118/` | the protocol: SDP, SLAC, the 10BASE-T1S bus, V2GTP, the EXI codec, the session state machines |
 | `LinuxTestEnvironment.md` | two virtual machines and two bridges, for a session over a wire rather than over loopback |
 | `.github/workflows/` | what runs on every push, and what runs at night |
