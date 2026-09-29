@@ -164,7 +164,9 @@ jobs:
       # The web interface is built by npm and webpack from inside the .NET build
       # — EV.csproj runs "npm install" and "npm run build" and then embeds
       # dist/ as assembly resources — so Node is not optional on either leg.
-      # 24.x rather than what Debian ships: package.json asks for 22 or newer.
+      # 24.x rather than what Debian ships: package.json asks for 22 or newer,
+      # and the frontend's tests are run by node itself directly on .ts files,
+      # which needs a Node new enough to strip types without being asked.
       - uses: actions/setup-node@v7
         with:
           node-version: '24.x'
@@ -175,19 +177,21 @@ jobs:
       - name: Build
         run: dotnet build EVCLI.slnx --configuration Release
 
-      # What the .NET build does not cover: webpack type-checks the modules it
-      # can reach from the entry point, which leaves out anything not imported
-      # yet. The pages every kind of node shares, and their tests, are
-      # WWCP_Node's, and its own CI runs them; the vehicle's pages have no
-      # tests of their own.
+      # What the .NET build does not cover. webpack type-checks the modules it
+      # can reach from the entry point, which leaves out the test files and
+      # anything not imported yet; and the frontend's own tests are run by node,
+      # so nothing in a dotnet build would ever execute them.
       #
       # node_modules is already there — the build put it there — so this costs
       # seconds. One leg, because TypeScript does not know which platform it is
       # on, and a second run would only make one red look like two failures.
-      - name: The web interface (type checks)
+      - name: The web interface (type checks and its own tests)
         if: matrix.leg == 'debian-13-container'
         working-directory: libs/EV/EV/Frontend
-        run: npm run typecheck
+        run: |
+          npm run typecheck
+          npm run typecheck:test
+          npm test
 
       # The node below the vehicle: its log, its configuration file, DNS and
       # NTS, the certificate store, its accounts and its ports - and the node
