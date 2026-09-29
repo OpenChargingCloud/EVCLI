@@ -233,8 +233,9 @@ where it was. Nothing is suppressed and nothing is held back to make that work.
 
 Where there is no terminal — from a script, under a service manager, in CI, or
 with the output going into a file or through `| tee` — there is no prompt and
-nothing to type at, and the vehicle runs until it is stopped exactly as it did
-before.
+nothing to type at, and the vehicle simply runs until it is stopped. Ctrl+C
+stops it, and so does the SIGTERM a service manager sends: either way it shuts
+down as it does after `quit`.
 
 ### Certificates
 

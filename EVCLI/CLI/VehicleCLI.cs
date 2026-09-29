@@ -19,7 +19,7 @@
 
 using System.Reflection;
 
-using org.GraphDefined.Vanaheimr.CLI;
+using cloud.charging.open.protocols.WWCP.Node.CommandLine;
 
 #endregion
 
@@ -31,16 +31,20 @@ namespace cloud.charging.open.EV.CommandLine
     /// </summary>
     /// <remarks>
     /// Everything a command needs is reachable from here, which is why every
-    /// command takes one of these: the vehicle itself, and through it its
-    /// configuration, its log and everything the JSON API can do. A command is
-    /// a third way of asking for the same thing, beside the web interface and
-    /// the switches at a start - never an implementation of its own.
+    /// command of the vehicle's takes one of these: the vehicle itself, and
+    /// through it its configuration, its log and everything the JSON API can
+    /// do. A command is a third way of asking for the same thing, beside the
+    /// web interface and the switches at a start - never an implementation of
+    /// its own.
     ///
-    /// Commands are not listed anywhere. The constructor asks Styx to walk this
-    /// assembly for anything that implements ICLICommand and can be built from
-    /// a VehicleCLI, so a new command is a new file and nothing else.
+    /// The node's command line, with the commands every node has - syncNTS
+    /// among them - and the console until 'quit', Ctrl+C or SIGTERM. Commands
+    /// are not listed anywhere: what only a vehicle can be told is anything in
+    /// this assembly that implements ICLICommand and can be built from a
+    /// VehicleCLI, found as the node's are, so a new command is a new file and
+    /// nothing else.
     /// </remarks>
-    public class VehicleCLI : CLI
+    public class VehicleCLI : NodeCLI
     {
 
         #region Properties
@@ -58,11 +62,11 @@ namespace cloud.charging.open.EV.CommandLine
         /// Create the command line of the given vehicle.
         /// </summary>
         /// <param name="Vehicle">The running vehicle.</param>
-        /// <param name="AssembliesWithCLICommands">Further assemblies to search for commands. This one is searched either way.</param>
+        /// <param name="AssembliesWithCLICommands">Further assemblies to search for commands. This one and the node's are searched either way.</param>
         public VehicleCLI(EV                 Vehicle,
                           params Assembly[]  AssembliesWithCLICommands)
 
-            : base(AssembliesWithCLICommands)
+            : base(Vehicle, AssembliesWithCLICommands)
 
         {
 
