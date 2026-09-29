@@ -287,7 +287,9 @@ dotnet run --project EVCLI -- \
 Importing a credential also chooses it; importing a root simply makes it
 believed - a TLS root or a server certificate for every use, until the
 Certificates page says what it is for. `--list-certificates` prints every
-handle, and `--certificates <dir>` points the vehicle at another store.
+handle and marks the ones chosen, this run's switches included, and
+`--certificates <dir>` points the vehicle at another store, measured from where
+it is started.
 
 PEM, DER and PKCS#12 all go in. A root is a certificate on its own; a
 credential has to bring its private key, so a PEM for one holds the key
@@ -328,11 +330,11 @@ without rebuilding the C# side.
 
 | | |
 |---|---|
-| `EVCLI/` | the command line: switches, and what the console says at a start |
+| `EVCLI/` | the command line: the vehicle's own switches, and its lines of what the console says at a start |
 | `EVCLI/CLI/` | what can be typed at the running vehicle - one file per command |
 | `libs/EV/EV/` | the vehicle itself - its configuration, its log, its JSON API, its web interface |
 | `libs/EV/EV/Frontend/` | the web interface: TypeScript and SCSS, bundled by webpack |
-| `libs/WWCP_Node/` | what every one of these programs shares: the configuration file, the log, name resolution and the time, the certificate store, who may sign in |
+| `libs/WWCP_Node/` | what every one of these programs shares: the configuration file, the log, name resolution and the time, the certificate store, who may sign in, and the switches, the usage and the banner every node has |
 | `libs/EV/EVTests/` | what the configuration may say, and what it may not - and, through WWCP_Node's conformance suite, what every node has to answer |
 | `libs/WWCP_ISO15118/` | the protocol: SDP, SLAC, the 10BASE-T1S bus, V2GTP, the EXI codec, the session state machines |
 | `LinuxTestEnvironment.md` | two virtual machines and two bridges, for a session over a wire rather than over loopback |
