@@ -291,47 +291,108 @@ namespace cloud.charging.open.EV
 
         /// <summary>
         /// Which interface a discovery would use, and - when nobody said -
-        /// what made it that one.
+        /// what made it that one, for the banner: in lines of 80 columns with
+        /// its column, broken between words and never in the name of an
+        /// interface, however many words that has.
         /// </summary>
         /// <remarks>
         /// A guess that does not announce itself is how somebody spends an
         /// afternoon wondering which cable is in use, so the reason is part of
         /// the answer rather than something to go and read in the source.
+        ///
+        /// Said in one line, a machine with three virtual switches, each named
+        /// like "vEthernet (Neuer virtueller Switch)", made one of 203 columns,
+        /// where the node's banner keeps even its time servers to 80.
         /// </remarks>
         private static String DescribeV2GInterface(String?                            Configured,
                                                    IReadOnlyList<V2GNetworkInterface>  Candidates)
         {
 
+            // The banner puts every line of a value at its column, which none
+            // of the vehicle's labels moves; WrapItems keeps a line to 80 with
+            // what it begins with, so each begins with the column here.
+            var column = new String(' ', NodeBanner.Column);
+
+            return String.Join("\n", NodeUsage.WrapItems(WordsOfTheV2GInterface(Configured, Candidates), column, column).
+                                               Select(line => line[column.Length..]));
+
+        }
+
+        #endregion
+
+        #region (private static) WordsOfTheV2GInterface(Configured, Candidates)
+
+        /// <summary>
+        /// What <see cref="DescribeV2GInterface"/> says, word by word: the name
+        /// of an interface one word, a comma or a dash after it with it.
+        /// </summary>
+        private static IEnumerable<String> WordsOfTheV2GInterface(String?                            Configured,
+                                                                  IReadOnlyList<V2GNetworkInterface>  Candidates)
+        {
+
             if (Configured is not null)
-                return Configured;
+                return [ Configured ];
 
             if (Candidates.Count == 0)
-                return "none - this machine has no interface that could carry V2G traffic";
+                return Words("none - this machine has no interface that could carry V2G traffic");
 
             var chosen = V2GLink.Choose(Candidates);
 
             if (chosen is null)
-                return "none";
+                return [ "none" ];
 
             if (Candidates.Count == 1)
-                return chosen.Name;
+                return [ chosen.Name ];
 
-            var others       = String.Join(", ", Candidates.Select(candidate => candidate.Name));
-            var withoutIPv4  = Candidates.Where(candidate => !candidate.HasIPv4Address).ToArray();
+            var withoutIPv4 = Candidates.Where(candidate => !candidate.HasIPv4Address).ToArray();
 
             return withoutIPv4.Length switch {
 
-                       1  => $"{chosen.Name} (the only one of {others} without an IPv4 address)",
+                       1   => [ chosen.Name, .. Words("(the only one of"), .. Listed(Candidates,  ""),   .. Words("without an IPv4 address)") ],
 
                        // Narrowed but not decided: say both, so that nobody reads
                        // a coin toss as a conclusion. --interface settles it.
-                       > 1 => $"{chosen.Name} (first of {String.Join(", ", withoutIPv4.Select(candidate => candidate.Name))}, which have no IPv4 address)",
+                       > 1 => [ chosen.Name, .. Words("(first of"),        .. Listed(withoutIPv4, ","),  .. Words("which have no IPv4 address)") ],
 
-                       _  => $"{chosen.Name} (first of {others} - every one of them has an IPv4 address)"
+                       _   => [ chosen.Name, .. Words("(first of"),        .. Listed(Candidates,  " -"), .. Words("every one of them has an IPv4 address)") ]
 
                    };
 
         }
+
+        #endregion
+
+        #region (private static) Words(Text) / Listed(Interfaces, AfterTheLast)
+
+        /// <summary>
+        /// The words of a text, a dash with the word before it, as the node
+        /// keeps it in what it breaks.
+        /// </summary>
+        private static List<String> Words(String Text)
+        {
+
+            var words = new List<String>();
+
+            foreach (var word in Text.Split(' ', StringSplitOptions.RemoveEmptyEntries))
+            {
+                if (word == "-" && words.Count > 0)
+                    words[^1] += " -";
+                else
+                    words.Add(word);
+            }
+
+            return words;
+
+        }
+
+        /// <summary>
+        /// The names of interfaces, one word each, a comma after every one but
+        /// the last, and what the given text says after the last.
+        /// </summary>
+        private static IEnumerable<String> Listed(IReadOnlyList<V2GNetworkInterface>  Interfaces,
+                                                  String                              AfterTheLast)
+
+            => Interfaces.Select((candidate, index) => candidate.Name + (index < Interfaces.Count - 1 ? "," : AfterTheLast));
 
         #endregion
 
