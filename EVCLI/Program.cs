@@ -189,6 +189,24 @@ namespace cloud.charging.open.EV
 
         #endregion
 
+        #region (private static) Say(Line)
+
+        /// <summary>
+        /// What this run refuses, on the error stream, broken between words at
+        /// <see cref="NodeUsage.Width"/> as the node breaks what it refuses:
+        /// "The session could not be configured" and why was one line of 150
+        /// columns in a terminal of 80.
+        /// </summary>
+        private static void Say(String Line)
+        {
+
+            foreach (var part in NodeUsage.Wrap(Line, "", ""))
+                Console.Error.WriteLine(part);
+
+        }
+
+        #endregion
+
         #region (private static) TryTakeNumber(Arguments, ref Index, Flag, out Value)
 
         /// <summary>
@@ -206,7 +224,7 @@ namespace cloud.charging.open.EV
                 return true;
             }
 
-            Console.Error.WriteLine($"Missing or invalid number after {Flag}!");
+            Say($"Missing or invalid number after {Flag}!");
             Value = 0;
             return false;
 
@@ -235,7 +253,7 @@ namespace cloud.charging.open.EV
 
             if (!NodeArguments.TryTakeValue(Arguments, ref Index, out var raw))
             {
-                Console.Error.WriteLine($"Missing duration after {Flag}! Try 90, 90m, 2h or 1h30m.");
+                Say($"Missing duration after {Flag}! Try 90, 90m, 2h or 1h30m.");
                 return false;
             }
 
@@ -254,7 +272,7 @@ namespace cloud.charging.open.EV
                 if (i == start ||
                     !Double.TryParse(text[start..i], NumberStyles.Float, CultureInfo.InvariantCulture, out var number))
                 {
-                    Console.Error.WriteLine($"{Flag}: '{raw}' is not a duration. Try 90, 90m, 2h or 1h30m.");
+                    Say($"{Flag}: '{raw}' is not a duration. Try 90, 90m, 2h or 1h30m.");
                     return false;
                 }
 
@@ -266,7 +284,7 @@ namespace cloud.charging.open.EV
                     case 'm':  total += TimeSpan.FromMinutes(number);  break;
                     case 'h':  total += TimeSpan.FromHours  (number);  break;
                     default:
-                        Console.Error.WriteLine($"{Flag}: unknown unit '{unit}' in '{raw}' - use s, m or h.");
+                        Say($"{Flag}: unknown unit '{unit}' in '{raw}' - use s, m or h.");
                         return false;
                 }
 
@@ -276,7 +294,7 @@ namespace cloud.charging.open.EV
 
             if (!seen || total <= TimeSpan.Zero)
             {
-                Console.Error.WriteLine($"{Flag} expects a duration greater than zero, got '{raw}'.");
+                Say($"{Flag} expects a duration greater than zero, got '{raw}'.");
                 return false;
             }
 
@@ -402,7 +420,7 @@ namespace cloud.charging.open.EV
                     case "--name":
                         if (!NodeArguments.TryTakeValue(rest, ref i, out name))
                         {
-                            Console.Error.WriteLine("Missing name after --name!");
+                            Say("Missing name after --name!");
                             return 2;
                         }
                         break;
@@ -410,7 +428,7 @@ namespace cloud.charging.open.EV
                     case "--vin":
                         if (!NodeArguments.TryTakeValue(rest, ref i, out vin))
                         {
-                            Console.Error.WriteLine("Missing identification after --vin!");
+                            Say("Missing identification after --vin!");
                             return 2;
                         }
                         break;
@@ -452,7 +470,7 @@ namespace cloud.charging.open.EV
                     case "--interface":
                         if (!NodeArguments.TryTakeValue(rest, ref i, out interfaceName))
                         {
-                            Console.Error.WriteLine("Missing interface name after --interface!");
+                            Say("Missing interface name after --interface!");
                             return 2;
                         }
                         break;
@@ -468,7 +486,7 @@ namespace cloud.charging.open.EV
                     case "--connect":
                         if (!NodeArguments.TryTakeValue(rest, ref i, out connect))
                         {
-                            Console.Error.WriteLine("Missing host:port after --connect!");
+                            Say("Missing host:port after --connect!");
                             return 2;
                         }
                         break;
@@ -476,7 +494,7 @@ namespace cloud.charging.open.EV
                     case "--protocol":
                         if (!NodeArguments.TryTakeValue(rest, ref i, out protocolText))
                         {
-                            Console.Error.WriteLine("Missing 2, 20 or both after --protocol!");
+                            Say("Missing 2, 20 or both after --protocol!");
                             return 2;
                         }
                         break;
@@ -484,7 +502,7 @@ namespace cloud.charging.open.EV
                     case "--mode":
                         if (!NodeArguments.TryTakeValue(rest, ref i, out modeText))
                         {
-                            Console.Error.WriteLine("Missing ac, dc or mcs after --mode!");
+                            Say("Missing ac, dc or mcs after --mode!");
                             return 2;
                         }
                         break;
@@ -528,7 +546,7 @@ namespace cloud.charging.open.EV
                     case "--tls-backend":
                         if (!NodeArguments.TryTakeValue(rest, ref i, out tlsBackend))
                         {
-                            Console.Error.WriteLine("Missing dotnet or bc after --tls-backend!");
+                            Say("Missing dotnet or bc after --tls-backend!");
                             return 2;
                         }
                         break;
@@ -536,7 +554,7 @@ namespace cloud.charging.open.EV
                     case "--pki-dir":
                         if (!NodeArguments.TryTakeValue(rest, ref i, out pkiDir))
                         {
-                            Console.Error.WriteLine("Missing directory after --pki-dir!");
+                            Say("Missing directory after --pki-dir!");
                             return 2;
                         }
                         break;
@@ -544,7 +562,7 @@ namespace cloud.charging.open.EV
                     case "--vehicle-cert":
                         if (!NodeArguments.TryTakeValue(rest, ref i, out vehicleCert))
                         {
-                            Console.Error.WriteLine("Missing PKCS#12 file after --vehicle-cert!");
+                            Say("Missing PKCS#12 file after --vehicle-cert!");
                             return 2;
                         }
                         break;
@@ -552,7 +570,7 @@ namespace cloud.charging.open.EV
                     case "--contract-cert":
                         if (!NodeArguments.TryTakeValue(rest, ref i, out contractCert))
                         {
-                            Console.Error.WriteLine("Missing PKCS#12 file after --contract-cert!");
+                            Say("Missing PKCS#12 file after --contract-cert!");
                             return 2;
                         }
                         break;
@@ -560,7 +578,7 @@ namespace cloud.charging.open.EV
                     case "--oem-cert":
                         if (!NodeArguments.TryTakeValue(rest, ref i, out oemCert))
                         {
-                            Console.Error.WriteLine("Missing PKCS#12 file after --oem-cert!");
+                            Say("Missing PKCS#12 file after --oem-cert!");
                             return 2;
                         }
                         break;
@@ -568,7 +586,7 @@ namespace cloud.charging.open.EV
                     case "--tariff-cert":
                         if (!NodeArguments.TryTakeValue(rest, ref i, out tariffCert))
                         {
-                            Console.Error.WriteLine("Missing PKCS#12 file after --tariff-cert!");
+                            Say("Missing PKCS#12 file after --tariff-cert!");
                             return 2;
                         }
                         break;
@@ -580,7 +598,7 @@ namespace cloud.charging.open.EV
                     case "--slac-peer":
                         if (!NodeArguments.TryTakeValue(rest, ref i, out slacPeer))
                         {
-                            Console.Error.WriteLine("Missing host:port after --slac-peer!");
+                            Say("Missing host:port after --slac-peer!");
                             return 2;
                         }
                         break;
@@ -592,7 +610,7 @@ namespace cloud.charging.open.EV
                     case "--t1s-transport":
                         if (!NodeArguments.TryTakeValue(rest, ref i, out t1sTransport))
                         {
-                            Console.Error.WriteLine("Missing kind after --t1s-transport! One of none, auto, afpacket, udp.");
+                            Say("Missing kind after --t1s-transport! One of none, auto, afpacket, udp.");
                             return 2;
                         }
                         break;
@@ -600,7 +618,7 @@ namespace cloud.charging.open.EV
                     case "--t1s-bus":
                         if (!NodeArguments.TryTakeValue(rest, ref i, out t1sBus))
                         {
-                            Console.Error.WriteLine("Missing group:port after --t1s-bus!");
+                            Say("Missing group:port after --t1s-bus!");
                             return 2;
                         }
                         break;
@@ -608,7 +626,7 @@ namespace cloud.charging.open.EV
                     case "--t1s-interface":
                         if (!NodeArguments.TryTakeValue(rest, ref i, out t1sInterface))
                         {
-                            Console.Error.WriteLine("Missing interface name after --t1s-interface!");
+                            Say("Missing interface name after --t1s-interface!");
                             return 2;
                         }
                         break;
@@ -618,7 +636,7 @@ namespace cloud.charging.open.EV
                             !Byte.TryParse(weightText, NumberStyles.Integer, CultureInfo.InvariantCulture, out var weight) ||
                             weight < 1 || weight > 8)
                         {
-                            Console.Error.WriteLine("Missing or invalid weight after --t1s-weight! Between 1 and 8 transmit opportunities per cycle.");
+                            Say("Missing or invalid weight after --t1s-weight! Between 1 and 8 transmit opportunities per cycle.");
                             return 2;
                         }
                         t1sWeight = weight;
@@ -657,7 +675,7 @@ namespace cloud.charging.open.EV
                     case "--resume":
                         if (!NodeArguments.TryTakeValue(rest, ref i, out resumeFrom))
                         {
-                            Console.Error.WriteLine("Missing session identification after --resume!");
+                            Say("Missing session identification after --resume!");
                             return 2;
                         }
                         chargeAtStart = true;
@@ -673,8 +691,8 @@ namespace cloud.charging.open.EV
 
             if (pause && pauseResume)
             {
-                Console.Error.WriteLine("--pause ends the session paused and stops there; --pause-resume goes on to rejoin it. " +
-                                        "They ask for different runs.");
+                Say("--pause ends the session paused and stops there; --pause-resume goes on to rejoin it. " +
+                    "They ask for different runs.");
                 return 2;
             }
 
@@ -733,7 +751,7 @@ namespace cloud.charging.open.EV
 
                     if (!vehicle.TryUpdateVehicleConfiguration(told, out var problem))
                     {
-                        Console.Error.WriteLine($"The vehicle could not be configured: {problem}");
+                        Say($"The vehicle could not be configured: {problem}");
                         return 2;
                     }
 
@@ -765,7 +783,7 @@ namespace cloud.charging.open.EV
 
                     if (!vehicle.TryUpdateV2GConfiguration(told, out var problem))
                     {
-                        Console.Error.WriteLine($"The link could not be configured: {problem}");
+                        Say($"The link could not be configured: {problem}");
                         return 2;
                     }
 
@@ -862,7 +880,7 @@ namespace cloud.charging.open.EV
 
                 if (sessionRefused is not null)
                 {
-                    Console.Error.WriteLine($"The session could not be configured: {sessionRefused}");
+                    Say($"The session could not be configured: {sessionRefused}");
                     return 2;
                 }
 

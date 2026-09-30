@@ -95,6 +95,13 @@ Hermod's HTTPExt API, mounted under `/ext`. The web interface is
 on <http://127.0.0.1:2347/>; `--any` binds every address instead of the
 loopback, and `--help` lists the rest.
 
+A switch that cannot be followed ends the start with exit code 2 and says why
+on the error stream, in lines of 80 columns as `--help` is. So does a
+certificate to import that would not go in — no certificate in the file, a
+PKCS#12 whose password was not given, a credential without its key — and that
+is found out before the vehicle is made, so that a first start refused for it
+leaves nothing on the disk.
+
 Everything that happens is written three times over, because the three answer
 different questions. The **console** shows what is going on to whoever is
 watching, at the level `--verbose` and `--quiet` choose. The **Logs** page
