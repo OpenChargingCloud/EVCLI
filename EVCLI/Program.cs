@@ -993,8 +993,8 @@ namespace cloud.charging.open.EV
 
                     Console.WriteLine($"  session        {SessionOutcome(charged)}");
 
-                    if (charged["battery"] is JObject pack && pack["describe"]?.Type == JTokenType.String)
-                        Console.WriteLine($"  battery        {pack.Value<String>("describe")}");
+                    if (charged["battery"] is JObject pack && BatteryOutcome(pack) is { } packOutcome)
+                        Console.WriteLine($"  battery        {packOutcome}");
 
                     if (charged.Value<String>("pausedSessionId") is { } pausedId)
                         Console.WriteLine($"  paused as      {pausedId}  (rejoin it with --resume {pausedId})");
@@ -1020,7 +1020,7 @@ namespace cloud.charging.open.EV
         }
 
 
-        #region (private static) DiscoveryOutcome(Discovery) / PairOutcome(Pairing) / SessionOutcome(Session)
+        #region (private static) DiscoveryOutcome(Discovery) / PairOutcome(Pairing) / SessionOutcome(Session) / BatteryOutcome(Battery)
 
         /// <summary>
         /// How a discovery went, in one line for the console. The whole of it
@@ -1092,6 +1092,23 @@ namespace cloud.charging.open.EV
                                  $"auth {Session.Value<String>("authorization")}, " +
                                  $"setup {Session.Value<String>("sessionSetup")}, " +
                                  $"in {Session.Value<Double>("elapsed_ms") / 1000:F1} s");
+
+        }
+
+        /// <summary>
+        /// What the pack did, in one line: the session's own words, without
+        /// the "Battery:" they begin with, which the column says already.
+        /// </summary>
+        private static String? BatteryOutcome(JObject Battery)
+        {
+
+            const String name = "Battery: ";
+
+            var described = Battery.Value<String>("describe");
+
+            return described is not null && described.StartsWith(name, StringComparison.Ordinal)
+                       ? described[name.Length..]
+                       : described;
 
         }
 
