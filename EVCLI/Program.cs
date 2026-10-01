@@ -939,8 +939,9 @@ namespace cloud.charging.open.EV
                 foreach (var line in vehicle.Banner(
                                          OfTheKind: [
                                              ("vehicle",        $"{vehicle.VehicleName}{(vehicle.VIN is not null ? $" ({vehicle.VIN})" : "")}"),
-                                             ("battery",        $"{vehicle.StateOfCharge_percent:F0} % of {vehicle.BatteryCapacity_kWh:F0} kWh, " +
-                                                                $"asking for {vehicle.MaxChargingPower_kW:F1} kW up to {vehicle.TargetStateOfCharge_percent:F0} %")
+                                             ("battery",        String.Create(CultureInfo.InvariantCulture,
+                                                                              $"{vehicle.StateOfCharge_percent:F0} % of {vehicle.BatteryCapacity_kWh:F0} kWh, " +
+                                                                              $"asking for {vehicle.MaxChargingPower_kW:F1} kW up to {vehicle.TargetStateOfCharge_percent:F0} %"))
                                          ],
                                          AfterTheTimeServers: [
                                              ("V2G interface",  DescribeV2GInterface(vehicle.V2GSettings.InterfaceName, V2GLink.Candidates())),
@@ -1083,13 +1084,14 @@ namespace cloud.charging.open.EV
             if (Session.Value<String>("outcome") != "completed")
                 return Session.Value<String>("error") ?? "the session failed - see the log";
 
-            return $"ISO 15118{Session.Value<String>("protocol")} {Session.Value<String>("mode")} " +
-                   $"with {Session.Value<String>("station")}: " +
-                   $"{Session.Value<Int32>("exchanges")} exchanges, " +
-                   $"{Session.Value<Int64>("bytesOnWire")} bytes on the wire (request side), " +
-                   $"auth {Session.Value<String>("authorization")}, " +
-                   $"setup {Session.Value<String>("sessionSetup")}, " +
-                   $"in {Session.Value<Double>("elapsed_ms") / 1000:F1} s";
+            return String.Create(CultureInfo.InvariantCulture,
+                                 $"ISO 15118{Session.Value<String>("protocol")} {Session.Value<String>("mode")} " +
+                                 $"with {Session.Value<String>("station")}: " +
+                                 $"{Session.Value<Int32>("exchanges")} exchanges, " +
+                                 $"{Session.Value<Int64>("bytesOnWire")} bytes on the wire (request side), " +
+                                 $"auth {Session.Value<String>("authorization")}, " +
+                                 $"setup {Session.Value<String>("sessionSetup")}, " +
+                                 $"in {Session.Value<Double>("elapsed_ms") / 1000:F1} s");
 
         }
 
