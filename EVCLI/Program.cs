@@ -758,7 +758,8 @@ namespace cloud.charging.open.EV
                               CertificatesPath:  arguments.CertificatesPath,
                               ConsoleLogLevel:   arguments.ConsoleLogLevel,
                               LogPath:           arguments.LogPathBelow(root),
-                              BridgeDebugLog:    !arguments.NoTrace
+                              BridgeDebugLog:    !arguments.NoTrace,
+                              SSH:               arguments.SSH
                           );
             }
             catch (Exception e)
@@ -770,6 +771,10 @@ namespace cloud.charging.open.EV
 
             await using (vehicle)
             {
+
+                // What somebody signed in over SSH gets: the vehicle's own
+                // command line, with discover beside the node's commands.
+                vehicle.CommandLines = (terminal, caller) => new VehicleCLI(vehicle, terminal, caller);
 
                 #region What the switches said about this vehicle
 

@@ -22,6 +22,8 @@ using org.GraphDefined.Vanaheimr.Illias;
 
 using cloud.charging.open.EV.ISO15118;
 
+using cloud.charging.open.protocols.WWCP.Node.Web;
+
 #endregion
 
 namespace cloud.charging.open.EV.CommandLine
@@ -158,6 +160,10 @@ namespace cloud.charging.open.EV.CommandLine
             if (Arguments.Length > 2)
                 return [ $"Usage: {Help()}" ];
 
+            // What 'Look for a station' needs on the page.
+            if (!cli.MayDo(Permission.Run(VehicleAccess.V2G), CommandName, out var refused))
+                return [ refused ];
+
             var wanted = Arguments.Length == 2 ? Arguments[1] : null;
 
             // Said before the discovery rather than after it, and said at all
@@ -165,13 +171,14 @@ namespace cloud.charging.open.EV.CommandLine
             // went out on the wire, and nothing in them says who asked for it.
             //
             // The line the web interface writes when 'Look for a station' is
-            // pressed, with the same tags and "cli" where it says "web". There
-            // it names the account that pressed the button; here it is whoever
-            // is at the console, which the vehicle cannot tell apart.
+            // pressed, with the same tags and "cli" where it says "web" - and
+            // "ssh" beside it over SSH. There it names the account that pressed
+            // the button; over SSH the account signed in, and at the console
+            // whoever is there, which the vehicle cannot tell apart.
             cli.Vehicle.Log.Info(
-                $"Somebody at the command line asked this vehicle to look for a station " +
+                $"{cli.Caller.Asker} asked this vehicle to look for a station " +
                 $"{(wanted is null ? "on its configured interface" : $"on '{wanted}'")}.",
-                "15118", "sdp", "test", "cli"
+                cli.Caller.Tags("15118", "sdp", "test")
             );
 
             var discovery = await cli.Vehicle.DiscoverAsync(

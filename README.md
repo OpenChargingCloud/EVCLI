@@ -244,6 +244,51 @@ nothing to type at, and the vehicle simply runs until it is stopped. Ctrl+C
 stops it, and so does the SIGTERM a service manager sends: either way it shuts
 down as it does after `quit`.
 
+### Typing at it over SSH
+
+The same prompt is served over SSH, on port 22347 — twenty thousand above the
+web interface's — and on the addresses the web interface listens on: the
+loopback, or every address with `--any`. Nothing else is: no shell of the
+machine, no files, no tunnels. `--ssh-port` moves it, `--no-ssh` switches it
+off.
+
+Whoever signs in is an account of the vehicle, under its name, with a key of
+its own. The first start makes `root`; give it your public key once:
+
+```
+dotnet run --project EVCLI -- --authorize-ssh-key root=C:\Users\you\.ssh\id_ed25519.pub
+```
+
+An OpenSSH `.pub` goes in as it is, and so does what PuTTYgen saves with *Save
+public key*. The key is kept in `accounts/ssh/root`, a file in the format of
+`authorized_keys`, and putting a line into it by hand does the same; taking one
+out locks that key out at once. Then:
+
+```
+ssh -p 22347 root@127.0.0.1
+```
+
+or, in PuTTY, host `127.0.0.1`, port `22347`, *Connection → Data → Auto-login
+username* `root`, and the private key under *Connection → SSH → Auth →
+Credentials*. The first time, PuTTY asks whether to trust the vehicle's host
+key: the banner prints its fingerprint under `SSH`, to compare it with.
+
+```
+Electric vehicle v0.1.0: signed in as 'root' from 127.0.0.1:55351.
+Type 'help' for what can be typed here; 'quit' or Ctrl+D leaves, and the electric vehicle keeps running.
+
+EV> syncNTS
+```
+
+Everything works as at the console — Tab, the history, the log above the line
+being typed — with three differences. `quit`, `exit` and Ctrl+D leave the
+session, and the vehicle keeps running. The account may do what its roles let
+it do on the web interface, and the log names it: "'root' at the command line
+over SSH asked this vehicle to synchronise its time.", tagged `cli` and `ssh`.
+And the session's log starts at the console's level and is its own: `log
+debug` shows everything here, `log off` nothing, for this session alone. `who`
+says who else is signed in.
+
 ### Certificates
 
 Everything this vehicle believes, everything it presents and every server it
@@ -341,7 +386,7 @@ without rebuilding the C# side.
 | `EVCLI/CLI/` | what can be typed at the running vehicle - one file per command |
 | `libs/EV/EV/` | the vehicle itself - its configuration, its log, its JSON API, its web interface |
 | `libs/EV/EV/Frontend/` | the web interface: TypeScript and SCSS, bundled by webpack |
-| `libs/WWCP_Node/` | what every one of these programs shares: the configuration file, the log, name resolution and the time, the certificate store, who may sign in, and the switches, the usage and the banner every node has |
+| `libs/WWCP_Node/` | what every one of these programs shares: the configuration file, the log, name resolution and the time, the certificate store, who may sign in, the command line over SSH, and the switches, the usage and the banner every node has |
 | `libs/EV/EVTests/` | what the configuration may say, and what it may not - and, through WWCP_Node's conformance suite, what every node has to answer |
 | `libs/WWCP_ISO15118/` | the protocol: SDP, SLAC, the 10BASE-T1S bus, V2GTP, the EXI codec, the session state machines |
 | `LinuxTestEnvironment.md` | two virtual machines and two bridges, for a session over a wire rather than over loopback |
