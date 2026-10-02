@@ -284,10 +284,16 @@ Everything works as at the console — Tab, the history, the log above the line
 being typed — with three differences. `quit`, `exit` and Ctrl+D leave the
 session, and the vehicle keeps running. The account may do what its roles let
 it do on the web interface, and the log names it: "'root' at the command line
-over SSH asked this vehicle to synchronise its time.", tagged `cli` and `ssh`.
-And the session's log starts at the console's level and is its own: `log
-debug` shows everything here, `log off` nothing, for this session alone. `who`
-says who else is signed in.
+over SSH asked this electric vehicle to synchronise its time.", tagged `cli`
+and `ssh`. And the session's log starts at the console's level and is its own:
+`log debug` shows everything here, `log off` nothing, for this session alone.
+`who` says who else is signed in.
+
+Tried from Debian's OpenSSH in a real pseudo terminal, with the screen read
+back as an xterm would show it: Tab, Backspace as DEL, the arrows, Home and End
+in both of their spellings, Delete, Ctrl+C on a half-typed line, a window
+narrowed to 40 columns, keys typed ahead while a command runs, `exit`, and
+SIGTERM stopping the vehicle afterwards.
 
 ### Certificates
 
