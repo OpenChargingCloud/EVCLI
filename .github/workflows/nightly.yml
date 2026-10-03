@@ -206,6 +206,11 @@ jobs:
           # default ports 22347-22353. What answers there must be an SSH server.
           ssh_banner="$(timeout 5 bash -c 'exec 3<>/dev/tcp/127.0.0.1/22123 && head -n 1 <&3' 2>/dev/null | tr -d '\r' || true)"
 
+          # Whether it was still there to be asked, noted before it is stopped:
+          # asked only afterwards, the answer was "no longer running" every time.
+          running=no
+          kill -0 "$pid" 2>/dev/null && running=yes
+
           kill "$pid" 2>/dev/null || true
           wait "$pid" 2>/dev/null || true
 
@@ -242,7 +247,7 @@ jobs:
 
           if [ "$fault" != 0 ]; then
               echo
-              if kill -0 "$pid" 2>/dev/null; then
+              if [ "$running" = yes ]; then
                   echo "It was still running when it was asked."
               else
                   echo "It was no longer running when it was asked."
