@@ -16,4 +16,5 @@ git submodule update --init --recursive
 git submodule foreach git checkout master
 git submodule foreach git pull
 npm --prefix /home/ahzf/EVCLI/libs/EV/EV/Frontend ci
+#dotnet build EVCLI.slnx --configuration Release
 dotnet build EVCLI.slnx
