@@ -174,7 +174,7 @@ jobs:
           dotnet-version: '10.0.x'
 
       # The web interface is built by npm and webpack from inside the .NET build
-      # — EV.csproj runs "npm install" and "npm run build" and then embeds
+      # — EV.csproj runs "npm ci" and "npm run build" and then embeds
       # dist/ as assembly resources — so Node is not optional on either leg.
       # 24.x rather than what Debian ships: package.json asks for 22 or newer,
       # and the frontend's tests are run by node itself directly on .ts files,
