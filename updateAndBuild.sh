@@ -15,6 +15,7 @@ git pull --ff-only
 git submodule update --init --recursive
 git submodule foreach git checkout master
 git submodule foreach git pull
-npm --prefix /home/ahzf/EVCLI/libs/EV/EV/Frontend ci
+# No npm here: the build runs "npm ci" itself whenever the frontend's
+# package.json or package-lock.json changed (see libs/EV/EV/EV.csproj).
 #dotnet build EVCLI.slnx --configuration Release
 dotnet build EVCLI.slnx
