@@ -852,13 +852,10 @@ namespace cloud.charging.open.EV
                 // nothing to choose.
                 foreach (var entry in imported)
                 {
-                    switch (entry.Kind)
-                    {
-                        case CertificateKind.Vehicle:             vehicleCert  ??= entry.Id;  break;
-                        case CertificateKind.Contract:            contractCert ??= entry.Id;  break;
-                        case CertificateKind.OEMProvisioning:     oemCert      ??= entry.Id;  break;
-                        case CertificateKind.TariffVerification:  tariffCert   ??= entry.Id;  break;
-                    }
+                    if      (entry.Kind == CertificateKind.Vehicle)             vehicleCert  ??= entry.Id;
+                    else if (entry.Kind == CertificateKind.Contract)            contractCert ??= entry.Id;
+                    else if (entry.Kind == CertificateKind.OEMProvisioning)     oemCert      ??= entry.Id;
+                    else if (entry.Kind == CertificateKind.TariffVerification)  tariffCert   ??= entry.Id;
                 }
 
                 #endregion
