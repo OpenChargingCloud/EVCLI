@@ -919,7 +919,7 @@ namespace cloud.charging.open.EV
                 // refusal of them, so that a handle somebody mistyped is
                 // answered with the handles there are.
                 if (arguments.ListCertificates)
-                    vehicle.ListCertificates(Beside: entry => vehicle.UsedBySession(entry.Id) is not null
+                    vehicle.ListCertificates(Beside: entry => vehicle.UsedBySession(entry.Id, entry.Kind) is not null
                                                                   ? "<- chosen"
                                                                   : null);
 
