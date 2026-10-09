@@ -13,11 +13,14 @@ server carrying a JSON API and one Server-Sent Events stream, and a web
 interface built by npm and embedded into the assembly, so that the vehicle is
 one thing to deploy and needs nothing installed beside it.
 
-Sign in, open **ISO 15118** and press *Look for a station*: the vehicle
-multicasts an SDP request to `ff02::1` on the interface the station is on.
-Then open **Charging** and press *Charge*: it connects, agrees on a protocol,
-and charges to `SessionStop` — ISO 15118-2 or -20, AC, DC or MCS, plain TCP or
-TLS, EIM or Plug & Charge.
+Sign in, and the first page is **Stations**: choose how the vehicle plugs
+in — directly, over SLAC, or onto the 10BASE-T1S bus of an MCS coupler — and
+press *Look for a station*. It plugs in, stays plugged in, and multicasts an
+SDP request to `ff02::1` on the interface the station is on. Every station
+that answers is offered; choose how to secure the session beside it and press
+*Charge here*: the vehicle connects over the link it holds, agrees on a
+protocol, and charges to `SessionStop` — ISO 15118-2 or -20, AC, DC or MCS,
+plain TCP or TLS, EIM or Plug & Charge.
 
 Every request that goes out and every answer that comes in appears in the log
 while it happens, so the **Logs** page shows the exchange itself rather than
