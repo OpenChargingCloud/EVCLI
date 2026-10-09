@@ -13,7 +13,7 @@ server carrying a JSON API and one Server-Sent Events stream, and a web
 interface built by npm and embedded into the assembly, so that the vehicle is
 one thing to deploy and needs nothing installed beside it.
 
-Sign in, and the first page is **Stations**: choose how the vehicle plugs
+Sign in, and the first page is **Charging**: choose how the vehicle plugs
 in — directly, over SLAC, or onto the 10BASE-T1S bus of an MCS coupler — and
 press *Look for a station*. It plugs in, stays plugged in, and multicasts an
 SDP request to `ff02::1` on the interface the station is on. Every station
@@ -369,7 +369,7 @@ beside the configuration file - fingerprints and nothing else - so that
 another certificate is noticed where a server is held to none.
 
 The four credentials — `vehicle`, `contract`, `oemProvisioning` and
-`tariffVerification` — are chosen one per session, on the Charging page or with
+`tariffVerification` — are chosen one per session, on the Charging Session page or with
 the switches below.
 
 ```
