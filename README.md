@@ -204,6 +204,13 @@ of the key exchange and the time request with when it happened. Only a server
 of this vehicle is tested; anything else is answered with the ones there are,
 and nothing is asked.
 
+The servers above are the group that is legal time. Where the vehicle has
+other groups of time servers as well, a group's name comes first:
+`syncNTS bench` asks the group `bench`, and `syncNTS bench lc1.local` tests one
+of its servers. `listNTSGroups` lists them all - each with its servers, how
+many of them must answer, whether it is switched on and what its last check
+found - and the banner names them beside the legal one.
+
 The key exchange is TLS, and the test says what its certificate claims and
 whether that held up: the session, then every certificate of the chain as this
 machine built it - the server's, the intermediates', the root's - each with
@@ -243,7 +250,8 @@ and an interface is called `enp0s5` on the vehicle's Debian and
 `vEthernet (Default Switch)` on a Windows desk; nobody types either of those
 from memory twice. The vehicle already knows which of its interfaces could
 carry V2G traffic, so Tab offers exactly those — quoted where a name has a
-space in it. `syncNTS` takes a time server, and Tab offers the vehicle's own.
+space in it. `syncNTS` takes a group or a time server, and Tab offers the
+vehicle's own.
 Either list comes as soon as the command is typed, and each Tab after that
 completes as far as the names agree.
 
