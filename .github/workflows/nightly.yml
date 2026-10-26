@@ -140,9 +140,16 @@ jobs:
       #
       # Fatal, unlike the two steps further down: a red here is a real
       # regression in a combination this repository is responsible for.
+      #
+      # --blame-hang: a test that has not finished after 15 minutes is a hang, not
+      # a slow test - none takes more than seconds. Its test host is dumped
+      # (mini: thread stacks, a few MB) and stopped, and the run names the test
+      # instead of waiting for the step's own timeout without a word. On
+      # 2026-10-26 Hermod's WebSocket tests hung the meter's nightly, which runs
+      # the same suite, for two hours; which test it was could only be guessed.
       - name: Test everything, as pinned
         timeout-minutes: 120
-        run: dotnet test EVCLI.slnx --configuration Release --no-build --filter "TestCategory!=LiveDNS&TestCategory!=External&TestCategory!=LiveNetwork" --logger "console;verbosity=normal" --logger "trx;LogFileName=${{ matrix.leg }}.trx" --results-directory artifacts
+        run: dotnet test EVCLI.slnx --configuration Release --no-build --blame-hang --blame-hang-timeout 15m --blame-hang-dump-type mini --filter "TestCategory!=LiveDNS&TestCategory!=External&TestCategory!=LiveNetwork" --logger "console;verbosity=normal" --logger "trx;LogFileName=${{ matrix.leg }}.trx" --results-directory artifacts
 
       # The same start as in ci.yml, for the same reason and on the same leg.
       # Repeating it costs a minute and catches the kind of failure that only
@@ -294,7 +301,10 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: test-results-${{ matrix.leg }}
-          path: artifacts/*.trx
+          path: |
+            artifacts/*.trx
+            artifacts/*/Sequence_*.xml
+            artifacts/*/*_hangdump.dmp
 
 
   # ---------------------------------------------------------------------------
@@ -403,7 +413,7 @@ jobs:
         if: steps.build.outcome == 'success'
         continue-on-error: true
         timeout-minutes: 120
-        run: dotnet test EVCLI.slnx --configuration Release --no-build --filter "TestCategory!=LiveDNS&TestCategory!=External&TestCategory!=LiveNetwork" --logger "console;verbosity=normal"
+        run: dotnet test EVCLI.slnx --configuration Release --no-build --blame-hang --blame-hang-timeout 15m --blame-hang-dump-type mini --filter "TestCategory!=LiveDNS&TestCategory!=External&TestCategory!=LiveNetwork" --logger "console;verbosity=normal"
 
       - name: Say how it went
         if: ${{ !cancelled() }}
