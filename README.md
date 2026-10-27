@@ -96,7 +96,13 @@ The first start makes up one account, `root`, keeps it under `accounts/`
 beside the solution and prints its password once. Signing in happens at
 Hermod's HTTPExt API, mounted under `/ext`. The web interface is
 on <http://127.0.0.1:2347/>; `--any` binds every address instead of the
-loopback, and `--help` lists the rest.
+loopback, and `--help` lists the rest. Beyond the loopback, plain HTTP puts
+the password, API keys and session cookie on the network in the clear, and the
+vehicle says so loudly: `--https` with the store's TLS server identity, or
+`--https-cert` with `--https-key` and certbot's PEM files, serves HTTPS instead,
+`--redirect-port` beside it, and `--trusted-proxy` believes the reverse proxy
+in front that does it - as the configuration file's `web` section does, see
+[EV's README](https://github.com/OpenChargingCloud/EV#who-may-do-what).
 
 **Recommended for the first start: give `root` your own SSH key** with it, so
 that you can type at the vehicle over SSH from the start - see
