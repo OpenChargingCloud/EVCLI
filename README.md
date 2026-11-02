@@ -88,7 +88,7 @@ dotnet build EVCLI.slnx
 dotnet run --project EVCLI
 ```
 
-The build needs the .NET 10 SDK and Node.js. `dotnet build
+The build needs the .NET 10 SDK and Node.js 22.15 or newer. `dotnet build
 -p:SkipFrontendBuild=true` leaves the npm step out and reuses whatever is in
 `libs/EV/EV/Frontend/dist`.
 
