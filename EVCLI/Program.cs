@@ -759,7 +759,10 @@ namespace cloud.charging.open.EV
                               ConsoleLogLevel:   arguments.ConsoleLogLevel,
                               LogPath:           arguments.LogPathBelow(root),
                               BridgeDebugLog:    !arguments.NoTrace,
-                              SSH:               arguments.SSH,
+                              // Its log files over SFTP unless the file says
+                              // "sftp": false - read by who may read the Logs
+                              // page, and written by nobody.
+                              SSH:               arguments.SSH with { SftpByDefault = true },
                               Web:               arguments.Web
                           );
             }

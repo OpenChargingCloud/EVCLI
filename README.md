@@ -277,8 +277,9 @@ down as it does after `quit`.
 The same prompt is served over SSH, on port 22347 — twenty thousand above the
 web interface's — and on the addresses the web interface listens on: the
 loopback, or every address with `--any`. Nothing else is: no shell of the
-machine, no files, no tunnels. `--ssh-port` moves it, `--no-ssh` switches it
-off.
+machine and no tunnels, and of files only the vehicle's own log files - see
+[Its log files over SFTP](#its-log-files-over-sftp). `--ssh-port` moves it,
+`--no-ssh` switches it off.
 
 Whoever signs in is an account of the vehicle, under its name, with a key of
 its own. The first start makes `root`; give it your public key with that very
@@ -345,6 +346,23 @@ back as an xterm would show it: Tab, Backspace as DEL, the arrows, Home and End
 in both of their spellings, Delete, Ctrl+C on a half-typed line, a window
 narrowed to 40 columns, keys typed ahead while a command runs, `exit`, and
 SIGTERM stopping the vehicle afterwards.
+
+### Its log files over SFTP
+
+On the same port the vehicle serves its log files over SFTP, to the same
+accounts with the same keys:
+
+```
+sftp -P 22347 root@127.0.0.1
+```
+
+`/logs` holds the day's files, and `/logs/metrological` the metrological log
+and its public key — never `signing-key.pem`, its private key. An account sees
+them where it may read the Logs page, and nobody writes, renames or removes
+there, the administrators included. WinSCP and FileZilla come in the same way.
+`"ssh": { "sftp": false }` in the configuration file, or the checkbox on the
+**SSH server** page, switches it off; `--no-ssh` switches off the SSH server,
+and SFTP with it.
 
 ### Certificates
 
