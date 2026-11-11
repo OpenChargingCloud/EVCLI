@@ -458,18 +458,19 @@ without rebuilding the C# side.
 | | |
 |---|---|
 | `EVCLI/` | the command line: the vehicle's own switches, and its lines of what the console says at a start |
-| `EVCLI/CLI/` | what can be typed at the running vehicle - one file per command |
 | `libs/EV/EV/` | the vehicle itself - its configuration, its log, its JSON API, its web interface |
+| `libs/EV/EV/CommandLine/` | what can be typed at the running vehicle, at the console and over SSH - one file per command |
 | `libs/EV/EV/Frontend/` | the web interface: TypeScript and SCSS, bundled by webpack |
 | `libs/WWCP_Node/` | what every one of these programs shares: the configuration file, the log, name resolution and the time, the certificate store, who may sign in, the command line over SSH, and the switches, the usage and the banner every node has |
-| `libs/EV/EVTests/` | what the configuration may say, and what it may not - and, through WWCP_Node's conformance suite, what every node has to answer |
+| `libs/EV/EVTests/` | what the configuration may say, and what it may not, what the command line answers - and, through WWCP_Node's conformance suite, what every node has to answer |
 | `libs/WWCP_ISO15118/` | the protocol: SDP, SLAC, the 10BASE-T1S bus, V2GTP, the EXI codec, the session state machines |
 | `LinuxTestEnvironment.md` | two virtual machines and two bridges, for a session over a wire rather than over loopback |
 | `.github/workflows/` | what runs on every push, and what runs at night |
 
-The command line is this program's vocabulary and nothing else - the switches
-it is started with and the commands it can be typed at. What a vehicle *is*,
-and what it does, lives in `libs/EV`.
+This program is the switches a vehicle is started with, and nothing else.
+What a vehicle *is*, and what it does, lives in `libs/EV` - the commands it can
+be typed at while it runs among them, so that every program that runs a
+vehicle offers them, over SSH too, and they are tested with the vehicle.
 
 
 ### Your participation

@@ -776,10 +776,6 @@ namespace cloud.charging.open.EV
             await using (vehicle)
             {
 
-                // What somebody signed in over SSH gets: the vehicle's own
-                // command line, with discover beside the node's commands.
-                vehicle.CommandLines = (terminal, caller) => new VehicleCLI(vehicle, terminal, caller);
-
                 #region What the switches said about this vehicle
 
                 // Written to the configuration file rather than held in this
@@ -984,7 +980,7 @@ namespace cloud.charging.open.EV
                 if (discoverAtStart)
                 {
                     var found = await vehicle.DiscoverAsync();
-                    Console.WriteLine($"  SDP            {DiscoveryOutcome(found)}");
+                    Console.WriteLine($"  SDP            {DiscoverCommand.Outcome(found)}");
                     Console.WriteLine();
                 }
 
@@ -1026,31 +1022,10 @@ namespace cloud.charging.open.EV
         }
 
 
-        #region (private static) DiscoveryOutcome(Discovery) / PairOutcome(Pairing) / SessionOutcome(Session) / BatteryOutcome(Battery)
+        #region (private static) PairOutcome(Pairing) / SessionOutcome(Session) / BatteryOutcome(Battery)
 
-        /// <summary>
-        /// How a discovery went, in one line for the console. The whole of it
-        /// is in the log either way.
-        /// </summary>
-        internal static String DiscoveryOutcome(JObject Discovery)
-        {
-
-            var outcome = Discovery.Value<String>("outcome");
-
-            if (outcome == "found" && Discovery["secc"] is JObject secc)
-                return $"a station at [{secc.Value<String>("address")}]:{secc.Value<Int32>("port")} " +
-                       $"({(secc.Value<String>("security") == "tls" ? "TLS" : "no TLS")}), " +
-                       $"after {Discovery.Value<Int32>("attempts")} request(s) in {Discovery.Value<Double>("elapsed_ms"):F0} ms";
-
-            return outcome switch {
-                       "rejected"     => "something answered, and none of the answers was usable - see the log",
-                       "timeout"      => $"nothing answered after {Discovery.Value<Int32>("attempts")} request(s)",
-                       "noInterface"  => Discovery.Value<String>("error") ?? "there was nothing to broadcast on",
-                       "cancelled"    => "cancelled",
-                       _              => Discovery.Value<String>("error") ?? "the discovery failed - see the log"
-                   };
-
-        }
+        // How a discovery went is DiscoverCommand.Outcome, the vehicle's own,
+        // because the command discover says the same line.
 
         /// <summary>
         /// How a SLAC pairing went, in one line.
