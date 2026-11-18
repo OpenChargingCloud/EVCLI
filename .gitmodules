@@ -19,3 +19,6 @@
 [submodule "libs/WWCP_Node"]
 	path = libs/WWCP_Node
 	url = https://github.com/OpenChargingCloud/WWCP_Node.git
+[submodule "libs/WWCP_Core"]
+	path = libs/WWCP_Core
+	url = https://github.com/OpenChargingCloud/WWCP_Core.git

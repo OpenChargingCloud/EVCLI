@@ -5,6 +5,7 @@
     <Project Path="libs/WWCP_Node/WWCP_Node/WWCP_Node.csproj" Id="c8ea6c97-e401-4da1-856c-4b4344d64aaf" />
     <Project Path="libs/WWCP_Node/WWCP_Node_TestKit/WWCP_Node_TestKit.csproj" />
     <Project Path="libs/WWCP_Node/WWCP_Node_Tests/WWCP_Node_Tests.csproj" Id="2f631573-5ca9-4e3d-8dd8-279bda76c02f" />
+    <Project Path="libs/WWCP_Core/WWCP_CoreData/WWCP_CoreData.csproj" />
   </Folder>
   <Folder Name="/Dependencies/ISO15118/">
     <Project Path="libs/WWCP_ISO15118/WWCP_ISO15118_2/WWCP_ISO15118_2.csproj" />

@@ -126,7 +126,7 @@ jobs:
     steps:
 
       # Before the checkout, not after it. The deepest file below this clone
-      # root sits 110 characters down, and under the classic 260-character
+      # root sits 143 characters down, and under the classic 260-character
       # limit a submodule checkout gives up halfway through with "Filename too
       # long" — the same thing the README warns about for a clone by hand.
       - name: Allow long paths (Windows)
@@ -150,7 +150,7 @@ jobs:
       # sibling repositories are checked out beside each other and float on
       # master. Here they are pinned, and testing them as pinned is the point:
       # this repository's own question is whether this particular combination of
-      # six libraries works together. nightly.yml asks the other question.
+      # eight libraries works together. nightly.yml asks the other question.
       - uses: actions/checkout@v7
         with:
           submodules: recursive
@@ -171,7 +171,7 @@ jobs:
 
       - uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: '10.0.x'
+          dotnet-version: '11.0.x'
 
       # The web interface is built by npm and webpack from inside the .NET build
       # — EV.csproj runs "npm ci" and "npm run build" and then embeds
@@ -183,7 +183,7 @@ jobs:
         with:
           node-version: '24.x'
 
-      # The whole solution rather than only EVCLI: forty-two projects across six
+      # The whole solution rather than only EVCLI: forty-three projects across eight
       # submodules, and "they still compile together at these gitlinks" is the
       # one statement this repository is uniquely able to make.
       - name: Build
@@ -231,7 +231,7 @@ jobs:
 
       # The question no unit test in this repository asks: does it start?
       # Everything that only happens at startup happens here — the assemblies of
-      # six libraries resolve, Hermod binds its HTTP server, the HTTPExt API
+      # eight libraries resolve, Hermod binds its HTTP server, the HTTPExt API
       # builds an account store out of nothing, and the web interface turns out
       # to be inside the assembly rather than merely to have been built. That
       # last one earns the minute on its own: the build fails when webpack

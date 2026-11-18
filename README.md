@@ -57,9 +57,9 @@ account, no key.
 git config --global core.longpaths true
 ```
 
-The deepest file in the submodules is 110 characters below the clone root, and
+The deepest file in the submodules is 143 characters below the clone root, and
 under the classic 260-character limit git creates no file whose whole path is
-longer than 259, so the root itself may be at most 148 characters long.
+longer than 259, so the root itself may be at most 115 characters long.
 `D:\src\EVCLI` is fine; a checkout nested deep below
 `C:\Users\<you>\AppData\Local\Temp\...` can run out of room, and then the
 clone fails halfway through a submodule with `Filename too long` rather than
@@ -462,6 +462,7 @@ without rebuilding the C# side.
 | `libs/EV/EV/CommandLine/` | what can be typed at the running vehicle, at the console and over SSH - one file per command |
 | `libs/EV/EV/Frontend/` | the web interface: TypeScript and SCSS, bundled by webpack |
 | `libs/WWCP_Node/` | what every one of these programs shares: the configuration file, the log, name resolution and the time, the certificate store, who may sign in, the command line over SSH, and the switches, the usage and the banner every node has |
+| `libs/WWCP_Core/` | of it only `WWCP_CoreData`, which WWCP_Node builds on: messages, signatures and the networking node, and what connections over WebSockets and SSH are made of |
 | `libs/EV/EVTests/` | what the configuration may say, and what it may not, what the command line answers - and, through WWCP_Node's conformance suite, what every node has to answer |
 | `libs/WWCP_ISO15118/` | the protocol: SDP, SLAC, the 10BASE-T1S bus, V2GTP, the EXI codec, the session state machines |
 | `LinuxTestEnvironment.md` | two virtual machines and two bridges, for a session over a wire rather than over loopback |

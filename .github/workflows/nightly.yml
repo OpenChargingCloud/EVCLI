@@ -116,7 +116,7 @@ jobs:
 
       - uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: '10.0.x'
+          dotnet-version: '11.0.x'
 
       - uses: actions/setup-node@v7
         with:
@@ -363,7 +363,7 @@ jobs:
 
       - uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: '10.0.x'
+          dotnet-version: '11.0.x'
 
       - uses: actions/setup-node@v7
         with:
@@ -376,7 +376,7 @@ jobs:
       #
       # --remote is what makes this a different question from a plain update: it
       # ignores the sha recorded here and takes the tip of the submodule's
-      # remote HEAD, which for all six of these is master. Not --recursive:
+      # remote HEAD, which for all eight of these is master. Not --recursive:
       # none of them has submodules of its own.
       - name: Move every submodule to its tip
         shell: bash
