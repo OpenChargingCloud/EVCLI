@@ -170,7 +170,7 @@ jobs:
         run: |
           set -u
           tmp="$(mktemp -d)"
-          dotnet EVCLI/bin/Release/net10.0/EVCLI.dll \
+          dotnet EVCLI/bin/Release/net11.0/EVCLI.dll \
               --port          18123 \
               --ssh-port      22123 \
               --accounts      "$tmp/accounts" \

@@ -264,7 +264,7 @@ jobs:
         run: |
           set -u
           tmp="$(mktemp -d)"
-          dotnet EVCLI/bin/Release/net10.0/EVCLI.dll \
+          dotnet EVCLI/bin/Release/net11.0/EVCLI.dll \
               --port          18123 \
               --ssh-port      22123 \
               --accounts      "$tmp/accounts" \
@@ -371,7 +371,7 @@ jobs:
       # control: the entry assembly loads, its arguments parse, it exits 0.
       - name: The vehicle runs (Windows)
         if: runner.os == 'Windows'
-        run: dotnet EVCLI/bin/Release/net10.0/EVCLI.dll --help
+        run: dotnet EVCLI/bin/Release/net11.0/EVCLI.dll --help
 
       # The console log answers "did it pass" and almost nothing else. TRX keeps,
       # per test: outcome, duration, error message, stack trace, and the reason
