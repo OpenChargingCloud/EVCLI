@@ -89,6 +89,7 @@ namespace cloud.charging.open.EV
                                     "[--oem-cert <handle>]", "[--tariff-cert <handle>]",
                                     "[--target-energy <kWh>]", "[--max-charging-time <dur>]",
                                     "[--departure-time <dur>]", "[--min-soc <percent>]", "[--renegotiate]",
+                                    "[--stop-on-meter-deviation <percent>[:<Wh>]]",
                                     "[--slac-peer <host:port>]", "[--slac]",
                                     "[--t1s-transport none|auto|afpacket|udp]", "[--t1s-bus <group:port>]",
                                     "[--t1s-interface <name>]", "[--t1s-weight <1..8>]", "[--t1s]", "[--charge]",
@@ -122,6 +123,10 @@ namespace cloud.charging.open.EV
                                     .. NodeUsage.Switch("--mode ac|dc|mcs",             "the energy transfer mode (default: dc). Not negotiated - the station has to have been told " +
                                                                                         "the same. \"mcs\" is the DC message set under energy-transfer services 8/9; -20 only"),
                                     .. NodeUsage.Switch("--renegotiate",                "-2: send PowerDelivery(Renegotiate) after the first cycle"),
+                                    .. NodeUsage.Switch("--stop-on-meter-deviation <percent>[:<Wh>]",
+                                                                                        "end the charging when the station's meter strays from the vehicle's own count by more " +
+                                                                                        "than this: 5 is 5 % but never less than 10 Wh, 5:200 never less than 200 Wh. -20 tells " +
+                                                                                        "the station why (EVTerminationCode); -2 has no field for it"),
                                     "",
                                     "  Charging goals. Name none and the goal is --target-soc, or full:",
                                     .. NodeUsage.Switch("--target-energy <kWh>",        "charge until this much has been delivered"),
@@ -438,6 +443,7 @@ namespace cloud.charging.open.EV
             String?    t1sInterface  = null;
             Byte?      t1sWeight     = null;
             Boolean?   renegotiate   = null;
+            String?    meterDeviation = null;
             Double?    targetEnergy  = null;
             Double?    minimumSoC    = null;
             TimeSpan?  maxTime       = null;
@@ -552,6 +558,14 @@ namespace cloud.charging.open.EV
 
                     case "--renegotiate":
                         renegotiate = true;
+                        break;
+
+                    case "--stop-on-meter-deviation":
+                        if (!NodeArguments.TryTakeValue(rest, ref i, out meterDeviation))
+                        {
+                            NodeProgram.Say(Console.Error, "Missing <percent>[:<Wh>] after --stop-on-meter-deviation!");
+                            return 2;
+                        }
                         break;
 
                     case "--target-energy":
@@ -867,7 +881,7 @@ namespace cloud.charging.open.EV
                 if (connect is not null || protocolText is not null || modeText is not null || tls ||
                     tlsBackend is not null || pkiDir is not null ||
                     vehicleCert is not null || contractCert is not null || oemCert is not null ||
-                    tariffCert is not null || slacPeer is not null || renegotiate.HasValue ||
+                    tariffCert is not null || slacPeer is not null || renegotiate.HasValue || meterDeviation is not null ||
                     t1sTransport is not null || t1sBus is not null || t1sInterface is not null || t1sWeight.HasValue ||
                     targetEnergy.HasValue || minimumSoC.HasValue || maxTime.HasValue || departure.HasValue)
                 {
@@ -892,6 +906,7 @@ namespace cloud.charging.open.EV
                     if (t1sInterface is not null)  told["t1sInterface"]                 = t1sInterface;
                     if (t1sWeight.HasValue)        told["t1sWeight"]                    = t1sWeight.Value;
                     if (renegotiate.HasValue)      told["renegotiate"]                  = renegotiate.Value;
+                    if (meterDeviation is not null) told["stopOnMeterDeviation"]        = meterDeviation;
                     if (targetEnergy.HasValue)     told["targetEnergyKWh"]              = targetEnergy.Value;
                     if (minimumSoC.HasValue)       told["minimumStateOfChargePercent"]  = minimumSoC.Value;
                     if (maxTime.HasValue)          told["maxChargingTimeSeconds"]       = maxTime.  Value.TotalSeconds;
